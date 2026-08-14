@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
+  <!-- REHAB's decorative motif: a grid of rotated squares, the same geometry
+       the dispute platform draws inline (see components/BrandPattern.tsx).
+       Emitted here as a tileable file so it can be used as a CSS
+       background-image (`--brand-pattern`) on light chrome, where an inline
+       currentColor SVG is not available. Navy at low alpha — it should read as
+       woven paper, not wallpaper. -->
+  <g fill="#13273f">
+    <rect x="15.6" y="15.6" width="20.8" height="20.8" transform="rotate(45 26 26)" />
+    <rect x="-10.4" y="-10.4" width="20.8" height="20.8" transform="rotate(45 0 0)" />
+    <rect x="41.6" y="-10.4" width="20.8" height="20.8" transform="rotate(45 52 0)" />
+    <rect x="-10.4" y="41.6" width="20.8" height="20.8" transform="rotate(45 0 52)" />
+    <rect x="41.6" y="41.6" width="20.8" height="20.8" transform="rotate(45 52 52)" />
+  </g>
+</svg>

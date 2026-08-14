@@ -1,0 +1,14 @@
+{
+  "رجوع": "Back",
+  "الكل": "All",
+  "سعر مخفي": "Figure hidden",
+  "سعر محجوب — النقر يُظهره": "Figure hidden — click to reveal",
+
+  "الضمان هو أرضية الفوترة: أقل من العدد المثبَّت يُفوتر بالعدد المثبَّت، وأكثر منه يُفوتر بالحضور الفعلي.": "The guarantee is the billing floor: below it you bill the guarantee, above it you bill the head count.",
+  "يُنتَج فوق العدد المثبَّت بنسبة الفائض حتى يأكل القادمون المتأخرون، ولا يُفوتر هذا الفائض ما لم يُستهلك.": "Production runs above the guarantee by the overset so late arrivals eat; the overset is not billed unless consumed.",
+  "التكلفة تُكتشَف، والمستهدف سياسة، والسعر ينتج عنهما — لا العكس.": "Cost is discovered, the target is policy, and the price falls out of the two — not the other way round.",
+  "سعر الشراء يُقسَم على نسبة الاستخلاص للحصول على تكلفة ما يصل الطبق فعلًا.": "Purchase price divided by the yield gives the cost of what actually reaches the plate.",
+  "الاحتياج يُحوَّل إلى كمية شراء، ثم يُخصم منه الرصيد مع إبقاء الحد الأدنى، ثم يُقرَّب لأعلى إلى عبوات كاملة.": "Requirements convert to purchase quantity, net off stock while holding the par level, then round up to whole packs.",
+  "تجميع الطلبات في اليوم الواحد هو المقصود: ثلاث خدمات تحتاج الصنف نفسه هي طبخة واحدة، لا ثلاث.": "Aggregating a day's orders is the point: three services needing the same dish is one production run, not three.",
+  "مواسم الحج تشتغل على أعداد كبيرة وهوامش رفيعة — خطأ في مهلة التوريد لا يُصلَح بجولة في السوق.": "Hajj seasons run on large numbers and thin margins — a missed lead time cannot be fixed by a trip to the market."
+}

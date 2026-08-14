@@ -1,0 +1,21 @@
+# build outputs
+node_modules
+dist
+dist-stage
+
+# scratch / temp
+.tmp-*
+*.tsbuildinfo
+
+# local state
+*.local
+.DS_Store
+Thumbs.db
+
+# generated captures
+/screenshots/
+
+# NOTE: unlike hajj-package-wizard, /docs/ is NOT ignored here — this project's
+# docs/ holds docs/catering-engine.md, which is the sourcing for every rule in
+# src/lib/. If real client contracts or pricing sheets ever land in this repo,
+# ignore those files specifically rather than the whole directory.

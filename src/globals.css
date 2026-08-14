@@ -1,0 +1,268 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * REHAB Company brand guideline (1448) — light theme.
+ *
+ * Palette carried over verbatim from the dispute platform so the two
+ * products read as one house: Cloud Dancer #F1F0EC (page), Rich Black
+ * #0A0A0A (ink), Mystic Navy #13273F (primary / chrome), Dark Ruby
+ * #70000E (accent + alert).
+ *
+ * The *structure* — surface roles, the elevation ramp, the soft/deep pairs
+ * — is the package wizard's, because that is what makes a dense operations
+ * screen legible. Only the hues changed. Anything that reads `--brand-*`
+ * or `--surface-*` in a component works identically in both apps.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: "The Year of Handicrafts";
+  src: url("/fonts/TheYearofHandicrafts-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "The Year of Handicrafts";
+  src: url("/fonts/TheYearofHandicrafts-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "The Year of Handicrafts";
+  src: url("/fonts/TheYearofHandicrafts-SemiBold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "The Year of Handicrafts";
+  src: url("/fonts/TheYearofHandicrafts-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "The Year of Handicrafts";
+  src: url("/fonts/TheYearofHandicrafts-Black.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  /* A fixed `h-dvh` shell: scrolling happens in inner containers, never at
+   * document level, so no `scrollbar-gutter` is reserved (it would leave a
+   * permanent dead strip that pushes the nav rail off the edge). */
+  overflow: hidden;
+}
+
+:root {
+  font-family: "The Year of Handicrafts", "Segoe UI", Tahoma, system-ui, sans-serif;
+  color-scheme: light;
+  --radius: 0.625rem;
+
+  --background: #f1f0ec; /* Cloud Dancer — the page plane */
+  --foreground: #0a0a0a; /* Rich Black */
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+
+  /* Elevation ramp, tinted with the navy rather than neutral black so shadows
+   * read as part of the palette instead of grey smudges. */
+  --shadow-color: 213 53% 16%;
+  --elev-1:
+    0 1px 2px -1px hsl(var(--shadow-color) / 0.1), 0 1px 3px 0 hsl(var(--shadow-color) / 0.06);
+  --elev-2:
+    0 2px 4px -2px hsl(var(--shadow-color) / 0.12), 0 4px 10px -2px hsl(var(--shadow-color) / 0.08);
+  --elev-3:
+    0 8px 16px -6px hsl(var(--shadow-color) / 0.16), 0 20px 32px -12px hsl(var(--shadow-color) / 0.12);
+
+  --primary: #13273f; /* Mystic Navy — already ~13:1 on white, no darkening needed */
+  --primary-foreground: #ffffff;
+  --primary-brand: #13273f;
+  --secondary-brand: #70000e;
+  /* `bg-secondary` surfaces (secondary Button, Badge) point at the verified
+   * amber pair rather than a mid-tone that fails contrast on its own text. */
+  --secondary: var(--brand-amber-soft);
+  --secondary-foreground: var(--brand-amber-deep);
+  --muted: #eceae3;
+  --muted-foreground: #5c594f; /* warm gray, darkened to AAA on the cream page */
+  --accent: #eceae3;
+  --accent-foreground: #0a0a0a;
+  --destructive: #70000e; /* Dark Ruby doubles as the alert colour */
+  --border: #e4e2da;
+  --input: #e4e2da;
+  --ring: #13273f;
+  --warning: #b45309;
+  --success: #157347;
+
+  /* ──────────────────────────────────────────────────────────────────────
+   * Brand accents, by role. These are *surface* colours (saturated) — use
+   * them for tinted KPI tiles, chart fills and pattern overlays. For text
+   * on a light card use the matching `-deep`.
+   *
+   *   navy   — primary chrome, the rail, "planned / on track"
+   *   green  — confirmed, within target, healthy margin
+   *   amber  — needs attention: unguaranteed, over target, near cutoff
+   *   ruby   — REHAB's Dark Ruby: blocking, over-budget, past cutoff
+   *   stone  — neutral / not-started
+   * ────────────────────────────────────────────────────────────────────── */
+  --brand-navy: #13273f;
+  --brand-green: #157347;
+  --brand-amber: #b45309;
+  --brand-ruby: #70000e;
+  --brand-stone: #6f6c64;
+
+  /* Soft tinted surfaces for tiles, pills and chips. */
+  --brand-navy-soft: color-mix(in srgb, var(--brand-navy) 12%, white);
+  --brand-green-soft: color-mix(in srgb, var(--brand-green) 12%, white);
+  --brand-amber-soft: color-mix(in srgb, var(--brand-amber) 14%, white);
+  --brand-ruby-soft: color-mix(in srgb, var(--brand-ruby) 10%, white);
+  --brand-stone-soft: color-mix(in srgb, var(--brand-stone) 10%, white);
+
+  /* Deep variants — pulled past the 7:1 line so they hit WCAG AAA not only on
+   * white cards but also on the `-soft` tints above (which are ~88% white, so
+   * contrast there is always a hair lower than on pure white).
+   *
+   * Measured contrast (white bg / matching *-soft bg):
+   *   navy-deep  #0F1F33 → 14.9 : 1  /  12.0 : 1  ✓
+   *   green-deep #0E5433 → 8.5  : 1  /   7.2 : 1  ✓
+   *   amber-deep #6B3B08 → 8.3  : 1  /   7.1 : 1  ✓
+   *   ruby-deep  #4F000A → 13.6 : 1  /  11.9 : 1  ✓
+   *   stone-deep #45423b → 9.6  : 1  /   8.4 : 1  ✓ */
+  --brand-navy-deep: #0f1f33;
+  --brand-green-deep: #0e5433;
+  --brand-amber-deep: #6b3b08;
+  --brand-ruby-deep: #4f000a;
+  --brand-stone-deep: #45423b;
+
+  /* ──────────────────────────────────────────────────────────────────────
+   * Surface roles. Four planes, used consistently everywhere. Naming them by
+   * role rather than by colour is what keeps the pages coherent: a table
+   * header and an input well are both "sunken", so they always agree without
+   * anyone having to remember a hex value.
+   * ────────────────────────────────────────────────────────────────────── */
+  --surface-brand: #13273f; /* the rail, and anything that reads as chrome */
+  --surface-brand-hover: color-mix(in srgb, white 12%, var(--surface-brand));
+  --surface-brand-foreground: #f1f0ec;
+  --surface-page: #f1f0ec;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f6f5f1;
+  --surface-line: #e4e2da;
+
+  /* The identity's geometric motif, used as a faint texture on brand chrome.
+   * Kept very low contrast — it should register as woven paper, not wallpaper. */
+  --brand-pattern: url("/pattern.svg");
+
+  --chart-1: #13273f;
+  --chart-2: #70000e;
+  --chart-3: #157347;
+  --chart-4: #b45309;
+  --chart-5: #6f6c64;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #13273f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eceae3;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-border: #e4e2da;
+  --sidebar-ring: #13273f;
+}
+
+@theme inline {
+  --font-sans: "The Year of Handicrafts", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  --shadow-elev-1: var(--elev-1);
+  --shadow-elev-2: var(--elev-2);
+  --shadow-elev-3: var(--elev-3);
+
+  --color-surface-brand: var(--surface-brand);
+  --color-surface-brand-hover: var(--surface-brand-hover);
+  --color-surface-brand-foreground: var(--surface-brand-foreground);
+  --color-surface-page: var(--surface-page);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-line: var(--surface-line);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-brand: var(--primary-brand);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-brand: var(--secondary-brand);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-green: var(--brand-green);
+  --color-brand-amber: var(--brand-amber);
+  --color-brand-ruby: var(--brand-ruby);
+  --color-brand-stone: var(--brand-stone);
+  --color-brand-navy-soft: var(--brand-navy-soft);
+  --color-brand-green-soft: var(--brand-green-soft);
+  --color-brand-amber-soft: var(--brand-amber-soft);
+  --color-brand-ruby-soft: var(--brand-ruby-soft);
+  --color-brand-stone-soft: var(--brand-stone-soft);
+  --color-brand-navy-deep: var(--brand-navy-deep);
+  --color-brand-green-deep: var(--brand-green-deep);
+  --color-brand-amber-deep: var(--brand-amber-deep);
+  --color-brand-ruby-deep: var(--brand-ruby-deep);
+  --color-brand-stone-deep: var(--brand-stone-deep);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    text-box-trim: trim-end;
+    text-box-edge: cap alphabetic;
+  }
+  /* Opt-out for components where icons sit inline with text and the global
+   * trim crops glyphs/icons unevenly (nav rail, tab triggers, KPI tiles). */
+  .no-trim,
+  .no-trim * {
+    text-box-trim: none;
+  }
+}

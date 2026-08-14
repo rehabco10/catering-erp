@@ -1,0 +1,200 @@
+{
+  "brand": "REHAB",
+  "app": "Catering Operations",
+  "nav": {
+    "dashboard": "Overview",
+    "orders": "Projects",
+    "menus": "Menus",
+    "recipes": "Recipes",
+    "production": "Production",
+    "procurement": "Procurement",
+    "validation": "Checks",
+    "settings": "Settings",
+    "sections": "Sections",
+    "open_menu": "Open menu",
+    "season_badge": "Season {year}",
+    "error_count": "{count, plural, =0 {no findings} one {# blocking finding} other {# blocking findings}}"
+  },
+  "page": {
+    "dashboard": "Season overview",
+    "dashboard_desc": "Contracted covers, food cost, and the daily load on the kitchen.",
+    "orders": "Projects",
+    "orders_desc": "The service orders: date, site, menu, and a guaranteed cover count.",
+    "menus": "Menus & pricing",
+    "menus_desc": "Cost per cover against selling price and the target food-cost percentage.",
+    "recipes": "Recipes & ingredients",
+    "recipes_desc": "The bill of materials per dish, with yields and portion cost.",
+    "production": "Production plan",
+    "production_desc": "What each service day has to cook, aggregated across every order.",
+    "procurement": "Procurement & stock",
+    "procurement_desc": "Requirements net of stock, in whole packs, with order-by dates.",
+    "validation": "Checks",
+    "validation_desc": "Everything that blocks a service going out or makes the numbers wrong.",
+    "settings": "Settings",
+    "settings_desc": "Operating policy: guarantee lead time, overset, and the food-cost target."
+  },
+  "meal": {
+    "breakfast": "Breakfast",
+    "lunch": "Lunch",
+    "dinner": "Dinner",
+    "snack": "Snack"
+  },
+  "style": {
+    "buffet": "Buffet",
+    "plated": "Plated",
+    "boxed": "Boxed",
+    "grab_and_go": "Grab & go"
+  },
+  "tier": {
+    "economy": "Economy",
+    "standard": "Standard",
+    "premium": "Premium"
+  },
+  "station": {
+    "hot": "Hot kitchen",
+    "cold": "Cold kitchen",
+    "bakery": "Bakery",
+    "beverage": "Beverage",
+    "assembly": "Assembly & packing"
+  },
+  "storage": {
+    "dry": "Dry",
+    "chilled": "Chilled",
+    "frozen": "Frozen"
+  },
+  "cat": {
+    "protein": "Meat & poultry",
+    "produce": "Produce",
+    "dairy": "Dairy",
+    "dry_goods": "Dry goods",
+    "bakery": "Bakery",
+    "beverage": "Beverage",
+    "disposable": "Disposables"
+  },
+  "allergen": {
+    "gluten": "Gluten",
+    "dairy": "Dairy",
+    "egg": "Egg",
+    "nuts": "Tree nuts",
+    "peanut": "Peanut",
+    "sesame": "Sesame",
+    "soy": "Soy",
+    "fish": "Fish",
+    "shellfish": "Shellfish"
+  },
+  "status": {
+    "draft": "Draft",
+    "confirmed": "Confirmed",
+    "guaranteed": "Guaranteed",
+    "produced": "Produced",
+    "served": "Served",
+    "closed": "Closed",
+    "cancelled": "Cancelled"
+  },
+  "contract_status": {
+    "draft": "Draft",
+    "proposed": "Proposed",
+    "signed": "Signed",
+    "cancelled": "Cancelled"
+  },
+  "guarantee": {
+    "locked": "Guaranteed",
+    "open": "Awaiting client",
+    "due_soon": "Cutoff approaching",
+    "overdue": "Cutoff passed",
+    "not_required": "Not required"
+  },
+  "issue": {
+    "commercial": "Commercial",
+    "menu": "Menus",
+    "kitchen": "Kitchen",
+    "supply": "Supply",
+    "compliance": "Compliance",
+    "other": "Other",
+    "errors": "Blocking",
+    "warnings": "Advisory",
+    "clean": "Nothing to report."
+  },
+  "units": {
+    "covers": "{n} covers",
+    "sar": "SAR {n}",
+    "per_cover": "SAR {n} / cover",
+    "portions": "{n} portions",
+    "batches": "{n} batches",
+    "packs": "{n} packs",
+    "minutes": "{n} min",
+    "pct": "{n}%"
+  },
+  "field": {
+    "client": "Client",
+    "contract_no": "Contract no.",
+    "site": "Site",
+    "date": "Date",
+    "time": "Service time",
+    "meal": "Meal",
+    "style": "Service style",
+    "menu": "Menu",
+    "expected": "Expected covers",
+    "guaranteed": "Guaranteed covers",
+    "actual": "Actual covers",
+    "billable": "Billable",
+    "production": "Produced",
+    "overset": "Overset",
+    "price": "Price per cover",
+    "cost": "Cost per cover",
+    "food_cost_pct": "Food cost %",
+    "margin": "Margin per cover",
+    "revenue": "Revenue",
+    "yield": "Yield %",
+    "ap_cost": "Pack price",
+    "ep_cost": "EP unit cost",
+    "pack": "Pack",
+    "on_hand": "On hand",
+    "par": "Par level",
+    "supplier": "Supplier",
+    "lead_time": "Lead time",
+    "order_by": "Order by",
+    "shortfall": "Shortfall",
+    "station": "Station",
+    "portion_size": "Portion size",
+    "portions_per_cover": "Portions per cover",
+    "yield_portions": "Batch yield",
+    "prep_minutes": "Prep time",
+    "shelf_life": "Shelf life",
+    "allergens": "Allergens",
+    "halal_cert": "Halal certificate",
+    "committed": "Committed",
+    "scheduled": "Scheduled",
+    "remaining": "Remaining"
+  },
+  "policy": {
+    "guarantee_lead_hours": "Guarantee lead time (hours)",
+    "overset_pct": "Overset produced",
+    "target_food_cost_pct": "Target food cost",
+    "q_factor_pct": "Q factor",
+    "daily_capacity_covers": "Daily kitchen capacity",
+    "vat_pct": "VAT"
+  },
+  "action": {
+    "add_order": "Add service",
+    "add_menu": "Add menu",
+    "add_recipe": "Add recipe",
+    "add_ingredient": "Add ingredient",
+    "set_guarantee": "Record guarantee",
+    "set_actual": "Record head count",
+    "price_at_target": "Price at target",
+    "receive": "Receive",
+    "back": "Back",
+    "next": "Next",
+    "prev": "Previous",
+    "finish": "Add",
+    "search": "Search"
+  },
+  "empty": {
+    "orders": "Select a service to see its detail.",
+    "menus": "Select a menu to see its costing.",
+    "recipes": "Select a recipe to see its bill of materials.",
+    "production": "No services on this day.",
+    "procurement": "Nothing to buy for this day."
+  }
+}

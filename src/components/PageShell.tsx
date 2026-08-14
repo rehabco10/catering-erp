@@ -1,3 +1,5 @@
+import { ChevronDown } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 import { SIDE_PANEL_QUERY, TALL_ENOUGH_QUERY, useMediaQuery } from "@/hooks/use-media-query"
 
@@ -155,6 +157,54 @@ export function Card({
       )}
       <div className={cn("p-4", bodyClassName)}>{children}</div>
     </section>
+  )
+}
+
+/**
+ * A collapsed section on the page surface.
+ *
+ * For the material that is worth keeping but not worth carrying: a recipe's
+ * exploded raw requirement matters when a sub-recipe is involved or someone is
+ * checking what gets bought, and is noise the rest of the time. Rendering it as
+ * a second always-open table beside the one being edited is what made the old
+ * page hard to read — two views of the same data, side by side, to reconcile.
+ */
+export function Disclosure({
+  title,
+  count,
+  children,
+  defaultOpen = false,
+  className,
+}: {
+  title: string
+  /** Rendered as a chip after the title. Omit for none. */
+  count?: string
+  children: React.ReactNode
+  defaultOpen?: boolean
+  className?: string
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      className={cn(
+        "group overflow-hidden rounded-xl border border-surface-line bg-surface-raised shadow-[var(--elev-1)]",
+        className,
+      )}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-[12px] font-bold hover:bg-surface-sunken">
+        <ChevronDown
+          aria-hidden
+          className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+        />
+        <span className="min-w-0 flex-1 truncate">{title}</span>
+        {count != null && (
+          <span className="shrink-0 rounded-full bg-surface-sunken px-2 py-0.5 text-[10px] font-semibold text-muted-foreground tabular-nums">
+            {count}
+          </span>
+        )}
+      </summary>
+      <div className="border-t border-surface-line">{children}</div>
+    </details>
   )
 }
 

@@ -112,7 +112,9 @@
     "storage": "Storage",
     "base_unit": "Recipe unit",
     "pack_size": "Units per pack",
-    "halal_critical": "Halal-critical"
+    "halal_critical": "Halal-critical",
+    "per_portion": "Per portion",
+    "per_batch": "Per batch"
   },
   "policy": {
     "target_food_cost_pct": "Target food cost",
@@ -130,12 +132,16 @@
     "next": "Next",
     "prev": "Previous",
     "finish": "Add",
-    "search": "Search"
+    "search": "Search",
+    "add_line": "Add to build",
+    "remove": "Remove"
   },
   "empty": {
     "menus": "Select a menu to see its costing.",
     "recipes": "Select a recipe to see its bill of materials.",
-    "inventory": "Select an ingredient to see its costing."
+    "inventory": "Select an ingredient to see its costing.",
+    "no_results": "No matches.",
+    "build": "Nothing in the build yet."
   },
   "inventory": {
     "reorder": "Below par"
@@ -152,6 +158,16 @@
   "unit": {
     "kg": "kg",
     "l": "L",
-    "ea": "ea"
+    "ea": "ea",
+    "portion": "portions"
+  },
+  "section": {
+    "build": "Build",
+    "raw_requirement": "Raw requirement",
+    "used_by": "Used by"
+  },
+  "group": {
+    "ingredients": "Ingredients",
+    "sub_recipes": "Sub-recipes"
   }
 }

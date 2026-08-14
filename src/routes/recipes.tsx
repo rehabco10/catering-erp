@@ -9,7 +9,6 @@ import { Card, Note, PageHeader, Stat } from "@/components/PageShell"
 import { Button } from "@/components/ui/button"
 import { SelectField, cellCls } from "@/components/ui/field"
 import { FilterChips } from "@/components/ui/filter-chips"
-import { Price } from "@/components/ui/price"
 import {
   Table,
   TableBody,
@@ -20,9 +19,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useLocale, useLocalePath } from "@/i18n/LocaleProvider"
-import { apUnitCost, epUnitCost, explodeRecipe, recipeCost } from "@/lib/costing"
+import { apUnitCost, epUnitCost, explodeRecipe, recipeCost } from "@/engine/costing"
 import { dec2, int, money, pickName } from "@/lib/display"
-import type { StationValue } from "@/lib/schemas"
+import type { StationValue } from "@/engine/schemas"
 import { cn } from "@/lib/utils"
 import { addRecipeLine, removeRecipeLine, state } from "@/store/ops"
 import { useCatalog } from "@/store/use-issues"
@@ -101,7 +100,7 @@ export function RecipesPage() {
                       {int(recipe.yield_portions)} × {int(recipe.portion_size_g)}g
                     </p>
                     <p className="mt-1.5 text-[12px] font-semibold tabular-nums">
-                      <Price value={money(cost.perPortion)} interactive={false} />
+                      {money(cost.perPortion)}
                     </p>
                   </button>
                 )
@@ -253,13 +252,10 @@ function RecipeDetail({ recipeId }: { recipeId: string }) {
                     {ing ? `${dec2(ing.yield_pct)}%` : "—"}
                   </TableCell>
                   <TableCell className="px-2.5 text-end text-[11px] tabular-nums">
-                    <Price value={unit === null ? "—" : money(unit)} interactive={false} />
+                    {unit === null ? "—" : money(unit)}
                   </TableCell>
                   <TableCell className="px-2.5 text-end text-[12px] font-medium tabular-nums">
-                    <Price
-                      value={unit === null ? "—" : money(unit * line.qty)}
-                      interactive={false}
-                    />
+                    {unit === null ? "—" : money(unit * line.qty)}
                   </TableCell>
                   <TableCell className="text-end">
                     <Button
@@ -281,7 +277,7 @@ function RecipeDetail({ recipeId }: { recipeId: string }) {
                 {t("units.batches", { n: 1 })}
               </TableCell>
               <TableCell className="px-2.5 text-end text-[12px] font-bold tabular-nums">
-                <Price value={money(cost.perBatch)} interactive={false} />
+                {money(cost.perBatch)}
               </TableCell>
               <TableCell />
             </TableRow>
@@ -290,7 +286,7 @@ function RecipeDetail({ recipeId }: { recipeId: string }) {
                 {t("units.portions", { n: 1 })}
               </TableCell>
               <TableCell className="px-2.5 text-end text-[12px] font-bold tabular-nums">
-                <Price value={money(cost.perPortion)} interactive={false} />
+                {money(cost.perPortion)}
               </TableCell>
               <TableCell />
             </TableRow>
@@ -321,16 +317,10 @@ function RecipeDetail({ recipeId }: { recipeId: string }) {
                     {dec2(qty)} {ing.base_unit}
                   </TableCell>
                   <TableCell className="px-2.5 text-end text-[11px] text-muted-foreground tabular-nums">
-                    <Price
-                      value={apUnitCost(ing) === null ? "—" : money(apUnitCost(ing)!)}
-                      interactive={false}
-                    />
+                    {apUnitCost(ing) === null ? "—" : money(apUnitCost(ing)!)}
                   </TableCell>
                   <TableCell className="px-2.5 text-end text-[11px] tabular-nums">
-                    <Price
-                      value={epUnitCost(ing) === null ? "—" : money(epUnitCost(ing)!)}
-                      interactive={false}
-                    />
+                    {epUnitCost(ing) === null ? "—" : money(epUnitCost(ing)!)}
                   </TableCell>
                 </TableRow>
               )

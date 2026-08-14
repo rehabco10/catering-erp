@@ -7,9 +7,8 @@ import { Target, Trash2 } from "lucide-react"
 import { MasterDetail } from "@/components/MasterDetail"
 import { Card, Note, PageHeader } from "@/components/PageShell"
 import { Button } from "@/components/ui/button"
-import { SelectField, cellCls } from "@/components/ui/field"
+import { NumInput, SelectField, cellCls } from "@/components/ui/field"
 import { FilterChips } from "@/components/ui/filter-chips"
-import { MaskedPriceInput, Price } from "@/components/ui/price"
 import {
   Table,
   TableBody,
@@ -20,9 +19,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useLocale, useLocalePath } from "@/i18n/LocaleProvider"
-import { menuCost, menuVerdict, priceForTarget, recipeCost } from "@/lib/costing"
+import { menuCost, menuVerdict, priceForTarget, recipeCost } from "@/engine/costing"
 import { dec2, foodCostTone, money, pct, pickName, toneClasses } from "@/lib/display"
-import type { MenuTierValue } from "@/lib/schemas"
+import type { MenuTierValue } from "@/engine/schemas"
 import { cn } from "@/lib/utils"
 import { addMenuItem, priceMenuAtTarget, removeMenuItem, state } from "@/store/ops"
 import { useCatalog } from "@/store/use-issues"
@@ -98,7 +97,7 @@ export function MenusPage() {
                     </p>
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <span className="text-[12px] tabular-nums">
-                        <Price value={money(cost.perCover)} interactive={false} />
+                        {money(cost.perCover)}
                         <span className="text-muted-foreground">
                           {" / "}
                           {cost.pricePerCover === null ? "—" : money(cost.pricePerCover)}
@@ -162,13 +161,13 @@ function MenuDetail({ menuId }: { menuId: string }) {
           <div>
             <div className="text-[11px] text-muted-foreground">{t("field.cost")}</div>
             <div className="mt-0.5 text-[15px] font-bold tabular-nums">
-              <Price value={money(cost.perCover)} />
+              {money(cost.perCover)}
             </div>
           </div>
           <div>
             <div className="text-[11px] text-muted-foreground">{t("field.price")}</div>
             <div className="mt-1">
-              <MaskedPriceInput
+              <NumInput
                 value={menu.price_per_cover_sar ?? ""}
                 onChange={(e) => {
                   const live = state.menus.find((m) => m.id === menuId)
@@ -197,14 +196,14 @@ function MenuDetail({ menuId }: { menuId: string }) {
                 (cost.marginPerCover ?? 0) < 0 && "text-[color:var(--brand-ruby-deep)]",
               )}
             >
-              <Price value={cost.marginPerCover === null ? "—" : money(cost.marginPerCover)} />
+              {cost.marginPerCover === null ? "—" : money(cost.marginPerCover)}
             </div>
           </div>
         </div>
 
         {verdict === "loss" || verdict === "over_target" ? (
           <Note tone="warn">
-            {t("action.price_at_target")}: <Price value={money(suggested)} interactive={false} />
+            {t("action.price_at_target")}: {money(suggested)}
           </Note>
         ) : (
           <Note tone="brand">
@@ -274,10 +273,7 @@ function MenuDetail({ menuId }: { menuId: string }) {
                     />
                   </TableCell>
                   <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
-                    <Price
-                      value={money(rc.perPortion * item.portions_per_cover)}
-                      interactive={false}
-                    />
+                    {money(rc.perPortion * item.portions_per_cover)}
                   </TableCell>
                   <TableCell className="text-end">
                     <Button
@@ -299,7 +295,7 @@ function MenuDetail({ menuId }: { menuId: string }) {
                 {t("policy.q_factor_pct")} ({dec2(snap.policy.q_factor_pct)}%)
               </TableCell>
               <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
-                <Price value={money(cost.qFactorPerCover)} interactive={false} />
+                {money(cost.qFactorPerCover)}
               </TableCell>
               <TableCell />
             </TableRow>
@@ -308,7 +304,7 @@ function MenuDetail({ menuId }: { menuId: string }) {
                 {t("field.cost")}
               </TableCell>
               <TableCell className="px-2.5 text-end text-[12px] font-bold tabular-nums">
-                <Price value={money(cost.perCover)} interactive={false} />
+                {money(cost.perCover)}
               </TableCell>
               <TableCell />
             </TableRow>

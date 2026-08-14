@@ -100,6 +100,5 @@ export const NumInput = React.forwardRef<
 })
 
 export { Input, Label }
-export { Textarea } from "@/components/ui/textarea"
 export { Checkbox } from "@/components/ui/checkbox"
 export { SelectField, type SelectOption } from "@/components/ui/select-field"

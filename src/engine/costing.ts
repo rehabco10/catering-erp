@@ -175,12 +175,6 @@ export function explodeRecipe(
   return out
 }
 
-/** Whole batches to actually cook for a required number of portions. */
-export function batchesFor(recipe: Recipe, portions: number): number {
-  if (recipe.yield_portions <= 0) return 0
-  return Math.ceil(portions / recipe.yield_portions)
-}
-
 /* ── recipe cost ────────────────────────────────────────────────── */
 
 export interface RecipeCost {
@@ -290,9 +284,6 @@ export function priceForTarget(costPerCover: number, targetPct: number): number 
   if (targetPct <= 0) return 0
   return costPerCover / (targetPct / 100)
 }
-
-export const foodCostPct = (cost: number, price: number): number | null =>
-  price > 0 ? (cost / price) * 100 : null
 
 /* ── policy-aware helpers ───────────────────────────────────────── */
 

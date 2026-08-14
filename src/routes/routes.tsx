@@ -4,13 +4,12 @@ import { useSnapshot } from "valtio"
 import { CheckCircle2 } from "lucide-react"
 
 import { Card, Note, PageShell, Stat } from "@/components/PageShell"
+import { Button } from "@/components/ui/button"
 import { Field, NumInput } from "@/components/ui/field"
 import { FilterChips } from "@/components/ui/filter-chips"
-import { useLocaleNavigate, useSwitchLocale, useLocale } from "@/i18n/LocaleProvider"
-import { DatePicker } from "@/components/ui/date-picker"
-import { Button } from "@/components/ui/button"
+import { useLocale, useLocaleNavigate, useSwitchLocale } from "@/i18n/LocaleProvider"
 import { int } from "@/lib/display"
-import { categoryOf, type IssueCategory } from "@/lib/validation"
+import { categoryOf, type IssueCategory } from "@/engine/validation"
 import { cn } from "@/lib/utils"
 import { state } from "@/store/ops"
 import { useIssues } from "@/store/use-issues"
@@ -18,14 +17,10 @@ import { useIssues } from "@/store/use-issues"
 /* ── validation ─────────────────────────────────────────────────── */
 
 /** Where each finding's entity lives, so a row can be clicked through. */
-const ROUTE_FOR: Record<string, (id: string) => string | null> = {
-  order: (id) => `/orders/${id}`,
-  menu: (id) => `/menus/${id}`,
+const ROUTE_FOR: Record<string, (id: string) => string> = {
+  ingredient: (id) => `/inventory/${id}`,
   recipe: (id) => `/recipes/${id}`,
-  ingredient: () => "/procurement",
-  procurement: () => "/procurement",
-  season: () => "/production",
-  contract: () => "/orders",
+  menu: (id) => `/menus/${id}`,
 }
 
 /**
@@ -54,7 +49,7 @@ export function ValidationPage() {
   const shownWarnings = shown.filter((i) => i.level === "warning")
 
   const row = (issue: (typeof issues)[number], i: number) => {
-    const to = ROUTE_FOR[issue.scope]?.(issue.entityId) ?? null
+    const to = ROUTE_FOR[issue.scope]?.(issue.entityId)
     const blocking = issue.level === "error"
     return (
       <li key={`${issue.code}-${issue.entityId}-${i}`}>
@@ -70,9 +65,7 @@ export function ValidationPage() {
           <span
             className={cn(
               "mt-1.5 size-1.5 shrink-0 rounded-full",
-              blocking
-                ? "bg-[color:var(--brand-ruby)]"
-                : "bg-[color:var(--brand-amber)]",
+              blocking ? "bg-[color:var(--brand-ruby)]" : "bg-[color:var(--brand-amber)]",
             )}
           />
           <span className="min-w-0 flex-1">
@@ -105,9 +98,7 @@ export function ValidationPage() {
           className="mt-3"
           value={category}
           onChange={setCategory}
-          options={(
-            ["commercial", "menu", "kitchen", "supply", "compliance", "other"] as IssueCategory[]
-          )
+          options={(["menu", "kitchen", "supply", "compliance", "other"] as IssueCategory[])
             .filter((c) => counts[c])
             .map((c) => ({ value: c, label: t(`issue.${c}`), count: counts[c] }))}
         />
@@ -143,10 +134,9 @@ export function ValidationPage() {
 /**
  * The operating policy, in one place.
  *
- * These six numbers are what separate a hotel banquet desk from a mass-feeding
- * contract, and every one of them is an engine input rather than a constant —
- * changing the guarantee lead time here immediately re-dates every cutoff on
- * the services page, and changing the food-cost target re-verdicts every menu.
+ * Three numbers, and every one of them is an engine input rather than a
+ * constant: changing the food-cost target immediately re-verdicts every menu,
+ * and changing the Q factor re-costs every cover.
  */
 export function SettingsPage() {
   const snap = useSnapshot(state)
@@ -164,62 +154,22 @@ export function SettingsPage() {
   return (
     <PageShell title={t("page.settings")} description={t("page.settings_desc")}>
       <Card title={t("nav.settings")}>
-        <div className="grid gap-3 lg:grid-cols-2">
-          <Field
-            label={t("policy.guarantee_lead_hours")}
-            hint={t(
-              "الضمان هو أرضية الفوترة: أقل من العدد المثبَّت يُفوتر بالعدد المثبَّت، وأكثر منه يُفوتر بالحضور الفعلي.",
-            )}
-          >
-            <NumInput {...num("guarantee_lead_hours")} />
-          </Field>
-          <Field
-            label={t("policy.overset_pct")}
-            hint={t(
-              "يُنتَج فوق العدد المثبَّت بنسبة الفائض حتى يأكل القادمون المتأخرون، ولا يُفوتر هذا الفائض ما لم يُستهلك.",
-            )}
-          >
-            <NumInput {...num("overset_pct")} />
-          </Field>
+        <div className="grid gap-3 lg:grid-cols-3">
           <Field
             label={t("policy.target_food_cost_pct")}
             hint={t("التكلفة تُكتشَف، والمستهدف سياسة، والسعر ينتج عنهما — لا العكس.")}
           >
             <NumInput {...num("target_food_cost_pct")} />
           </Field>
-          <Field label={t("policy.q_factor_pct")}>
+          <Field label={t("policy.q_factor_pct")} hint={t("policy.q_factor_hint")}>
             <NumInput {...num("q_factor_pct")} />
-          </Field>
-          <Field label={t("policy.daily_capacity_covers")}>
-            <NumInput {...num("daily_capacity_covers")} />
           </Field>
           <Field label={t("policy.vat_pct")}>
             <NumInput {...num("vat_pct")} />
           </Field>
         </div>
-      </Card>
-
-      <Card title={t("nav.season_badge", { year: String(snap.season.year_hijri) })}>
-        <div className="grid gap-3 lg:grid-cols-2">
-          <Field label={t("field.date")}>
-            <DatePicker
-              value={snap.season.starts_on}
-              onChange={(v) => {
-                state.season.starts_on = v
-              }}
-            />
-          </Field>
-          <Field label={t("field.date")}>
-            <DatePicker
-              value={snap.season.ends_on}
-              onChange={(v) => {
-                state.season.ends_on = v
-              }}
-            />
-          </Field>
-        </div>
-        <Note tone="warn">
-          {t("مواسم الحج تشتغل على أعداد كبيرة وهوامش رفيعة — خطأ في مهلة التوريد لا يُصلَح بجولة في السوق.")}
+        <Note tone="brand">
+          {t("مواسم الحج تشتغل على أعداد كبيرة وهوامش رفيعة — نقطة مئوية واحدة في تكلفة الطعام تساوي مبلغًا كبيرًا.")}
         </Note>
       </Card>
 

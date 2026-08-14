@@ -7,10 +7,9 @@ import {
   IngredientCategory,
   MealPeriod,
   MenuTier,
-  ServiceStyle,
   Station,
   StorageClass,
-} from "@/lib/schemas"
+} from "@/engine/schemas"
 
 /**
  * Display helpers — one place that knows how a domain value becomes a string.
@@ -70,7 +69,6 @@ const optionsFrom = (values: readonly string[], prefix: string, t: TFunction): S
   values.map((value) => ({ value, label: t(`${prefix}.${value}`) }))
 
 export const mealOptions = (t: TFunction) => optionsFrom(MealPeriod.options, "meal", t)
-export const styleOptions = (t: TFunction) => optionsFrom(ServiceStyle.options, "style", t)
 export const tierOptions = (t: TFunction) => optionsFrom(MenuTier.options, "tier", t)
 export const stationOptions = (t: TFunction) => optionsFrom(Station.options, "station", t)
 export const storageOptions = (t: TFunction) => optionsFrom(StorageClass.options, "storage", t)

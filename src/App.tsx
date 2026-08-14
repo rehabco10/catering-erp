@@ -4,12 +4,9 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom
 import { Navigation } from "@/components/NavRail"
 import { LocaleProvider } from "@/i18n/LocaleProvider"
 import type { Locale } from "@/i18n/locale"
-import { DashboardPage } from "@/routes/dashboard"
-import { OrdersPage } from "@/routes/orders"
+import { InventoryPage } from "@/routes/inventory"
 import { MenusPage } from "@/routes/menus"
 import { RecipesPage } from "@/routes/recipes"
-import { ProductionPage } from "@/routes/production"
-import { ProcurementPage } from "@/routes/procurement"
 import { SettingsPage, ValidationPage } from "@/routes/routes"
 
 /**
@@ -30,17 +27,25 @@ function LocaleShell({ locale }: { locale: Locale }) {
   )
 }
 
-/** The section tree, relative — it resolves under whichever locale mounts it. */
+/**
+ * The section tree, relative — it resolves under whichever locale mounts it.
+ *
+ * Three parts and two supporting pages. The root redirects rather than
+ * rendering inventory directly, so there is exactly one canonical URL per
+ * section and `/inventory/:id` cannot collide with a sibling section name.
+ */
 const sections = (locale: Locale) => [
-  <Route key={`${locale}-home`} index element={<DashboardPage />} />,
-  <Route key={`${locale}-orders`} path="orders" element={<OrdersPage />} />,
-  <Route key={`${locale}-order`} path="orders/:orderId" element={<OrdersPage />} />,
-  <Route key={`${locale}-menus`} path="menus" element={<MenusPage />} />,
-  <Route key={`${locale}-menu`} path="menus/:menuId" element={<MenusPage />} />,
+  <Route key={`${locale}-home`} index element={<Navigate to="inventory" replace />} />,
+  <Route key={`${locale}-inventory`} path="inventory" element={<InventoryPage />} />,
+  <Route
+    key={`${locale}-ingredient`}
+    path="inventory/:ingredientId"
+    element={<InventoryPage />}
+  />,
   <Route key={`${locale}-recipes`} path="recipes" element={<RecipesPage />} />,
   <Route key={`${locale}-recipe`} path="recipes/:recipeId" element={<RecipesPage />} />,
-  <Route key={`${locale}-production`} path="production" element={<ProductionPage />} />,
-  <Route key={`${locale}-procurement`} path="procurement" element={<ProcurementPage />} />,
+  <Route key={`${locale}-menus`} path="menus" element={<MenusPage />} />,
+  <Route key={`${locale}-menu`} path="menus/:menuId" element={<MenusPage />} />,
   <Route key={`${locale}-validation`} path="validation" element={<ValidationPage />} />,
   <Route key={`${locale}-settings`} path="settings" element={<SettingsPage />} />,
 ]

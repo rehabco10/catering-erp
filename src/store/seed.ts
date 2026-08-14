@@ -1,34 +1,20 @@
-import type {
-  Contract,
-  Ingredient,
-  Menu,
-  Policy,
-  Recipe,
-  Season,
-  ServiceOrder,
-  Supplier,
-} from "@/lib/schemas"
+import type { Ingredient, Menu, Policy, Recipe, Supplier } from "@/engine/schemas"
 
 /**
- * A worked season, as the starting draft.
+ * A worked catalogue, as the starting draft.
  *
- * Shaped after a Hajj mass-feeding contract rather than a wedding book: a few
- * very large service orders a day, boxed and buffet, against two client
- * contracts with committed cover counts. That is the harder case — the
- * economics are thin, the guarantees are contractual, and a missed procurement
- * lead time cannot be fixed by a trip to the market.
+ * Shaped after Hajj mass feeding rather than a wedding book: large-batch
+ * dishes, thin margins, and suppliers whose certification actually matters.
  *
- * Several rows are deliberately imperfect, so the validation page has real
+ * Several rows are deliberately imperfect, so the checks page has real
  * findings on first run rather than an empty state that proves nothing:
  *   · fresh chicken sits below its par level, from a supplier whose halal
  *     certificate has lapsed  → a blocking compliance finding
  *   · Arabic bread carries no purchase price → the breakfast menu costs light
  *   · the premium lunch runs ~41% food cost against a 30% target
- *   · one imminent service still has no guarantee from the client
- *   · tomorrow's two services together exceed the kitchen's daily capacity
- *   · a short-lead chilled item for tomorrow was already due to be ordered
  *
- * Dates are generated relative to today so the seed never goes stale.
+ * The one date in here — the supplier certificate expiry — is generated
+ * relative to today, so the lapsed-certificate finding never goes stale.
  */
 
 const DAY = 86_400_000
@@ -37,24 +23,11 @@ const TODAY = new Date()
 /** `n` days from today, as an ISO date. Negative is in the past. */
 export const day = (n: number) => iso(new Date(TODAY.getTime() + n * DAY))
 
-export const SEED_SEASON: Season = {
-  year_hijri: 1448,
-  year_gregorian: 2026,
-  starts_on: day(-20),
-  ends_on: day(40),
-}
-
 export const SEED_POLICY: Policy = {
-  // 72 hours: the hotel-banquet convention, and enough for a kitchen drawing on
-  // standing supply. An operation that shops per event needs 5–7 days here.
-  guarantee_lead_hours: 72,
-  // Set ~5% over the guarantee, bill it only if consumed.
-  overset_pct: 5,
   target_food_cost_pct: 30,
   // Bread, condiments, oil and seasoning — the 5–10% that never reaches a
   // recipe card but is on every cover.
   q_factor_pct: 7,
-  daily_capacity_covers: 6000,
   vat_pct: 15,
 }
 
@@ -366,84 +339,4 @@ export const SEED_MENUS: Menu[] = [
       { id: "mi_dn4", recipe: "rec_boxing", portions_per_cover: 1 },
     ],
   },
-]
-
-/* ── contracts ──────────────────────────────────────────────────── */
-
-export const SEED_CONTRACTS: Contract[] = [
-  {
-    id: "ct_arab", client_ar: "مؤسسة مطوفي حجاج الدول العربية",
-    client_en: "Arab Countries Pilgrims Establishment",
-    contract_no: "REH-1448-011",
-    starts_on: day(-18), ends_on: day(30),
-    covers_committed: 42000, status: "signed",
-  },
-  {
-    id: "ct_ithraa", client_ar: "شركة إثراء الخير",
-    client_en: "Ithraa Alkhair Company",
-    contract_no: "REH-1448-024",
-    starts_on: day(-6), ends_on: day(26),
-    covers_committed: 12000, status: "signed",
-  },
-]
-
-/* ── service orders ─────────────────────────────────────────────── */
-
-/**
- * Two weeks of the book, straddling today so every guarantee state is
- * represented: closed services behind, a locked one tomorrow, an unguaranteed
- * one inside the 72-hour cutoff (overdue), and forecast-only work further out.
- */
-function order(
-  id: string,
-  contract: string,
-  offset: number,
-  time: string,
-  meal: ServiceOrder["meal_period"],
-  style: ServiceOrder["service_style"],
-  menu: string,
-  site: [string, string],
-  expected: number,
-  guaranteed: number | null,
-  actual: number | null,
-  status: ServiceOrder["status"],
-  notes = "",
-): ServiceOrder {
-  return {
-    id, contract, serves_on: day(offset), serves_at: time,
-    meal_period: meal, service_style: style, menu,
-    site_ar: site[0], site_en: site[1],
-    expected_covers: expected, guaranteed_covers: guaranteed,
-    actual_covers: actual, status, notes,
-  }
-}
-
-const MINA: [string, string] = ["مخيم منى — قطاع ٣", "Mina Camp — Sector 3"]
-const AZIZ: [string, string] = ["مقر العزيزية", "Aziziyah Compound"]
-const MADI: [string, string] = ["سكن المدينة", "Madinah Residence"]
-
-export const SEED_ORDERS: ServiceOrder[] = [
-  // ── behind us: counted and closed ──────────────────────────────
-  order("so_101", "ct_arab", -5, "06:30", "breakfast", "boxed", "menu_breakfast", MADI, 2800, 2750, 2731, "closed"),
-  order("so_102", "ct_arab", -5, "13:00", "lunch", "buffet", "menu_lunch_std", MADI, 2800, 2750, 2802, "closed",
-    "الحضور تجاوز الضمان — فُوتر على الفعلي."),
-  order("so_103", "ct_arab", -3, "06:30", "breakfast", "boxed", "menu_breakfast", AZIZ, 3100, 3050, 3018, "closed"),
-  order("so_104", "ct_ithraa", -2, "13:00", "lunch", "plated", "menu_lunch_prem", AZIZ, 420, 400, 396, "closed"),
-  // Served, not yet counted — the "past without a head count" warning.
-  order("so_105", "ct_arab", -1, "19:00", "dinner", "boxed", "menu_dinner", AZIZ, 3100, 3050, null, "served"),
-
-  // ── inside the cutoff ──────────────────────────────────────────
-  order("so_201", "ct_arab", 1, "06:30", "breakfast", "boxed", "menu_breakfast", MINA, 3400, 3400, null, "guaranteed"),
-  order("so_202", "ct_arab", 1, "13:00", "lunch", "buffet", "menu_lunch_std", MINA, 3400, 3400, null, "guaranteed"),
-  // No guarantee and the deadline has passed — a blocking finding on day one.
-  order("so_203", "ct_ithraa", 2, "13:00", "lunch", "plated", "menu_lunch_prem", AZIZ, 480, null, null, "confirmed",
-    "بانتظار تثبيت العدد من العميل."),
-  order("so_204", "ct_arab", 3, "19:00", "dinner", "boxed", "menu_dinner", MINA, 3600, 3550, null, "guaranteed"),
-
-  // ── forecast ───────────────────────────────────────────────────
-  order("so_301", "ct_arab", 6, "06:30", "breakfast", "boxed", "menu_breakfast", MINA, 4200, null, null, "confirmed"),
-  order("so_302", "ct_arab", 6, "13:00", "lunch", "buffet", "menu_lunch_std", MINA, 4200, null, null, "confirmed"),
-  order("so_303", "ct_arab", 6, "19:00", "dinner", "boxed", "menu_dinner", MINA, 4200, null, null, "confirmed"),
-  order("so_304", "ct_ithraa", 9, "13:00", "lunch", "plated", "menu_lunch_prem", AZIZ, 520, null, null, "draft"),
-  order("so_305", "ct_arab", 12, "13:00", "lunch", "buffet", "menu_lunch_std", MADI, 2600, null, null, "draft"),
 ]

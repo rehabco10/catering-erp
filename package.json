@@ -9,7 +9,8 @@
     "build:stage": "tsc -b && vite build --mode staging",
     "preview": "vite preview",
     "preview:stage": "vite preview --mode staging --port 4174",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

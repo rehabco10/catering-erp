@@ -1,27 +1,34 @@
-# منظومة الإعاشة — رحاب / REHAB Catering Operations
+# منظومة الإعاشة — رحاب / REHAB Catering
 
-An ERP-shaped MVP scaffold for catering operations: contracts and service
-orders (BEOs), menu costing, recipe bills of materials, day-by-day production
-planning, and procurement netted against stock.
+A REHAB-branded catering catalogue: stock and suppliers, recipes as bills of
+materials, and menus costed and priced off both.
 
-Two things were deliberately inherited rather than invented:
+```
+inventory  →  recipes  →  menus
+(stock,       (bill of      (what a cover
+ yields,       materials,    costs and
+ suppliers)    sub-recipes)  what it sells for)
+```
+
+Two things were inherited rather than invented:
 
 - **Branding** from `dispute-platform` — REHAB's palette (Cloud Dancer, Rich
   Black, Mystic Navy, Dark Ruby) and *The Year of Handicrafts* typeface.
 - **Structure and flow** from `hajj-package-wizard` — the same shell, the same
   UI primitives, the same Arabic-first bilingual routing, the same
-  pure-engine / valtio-draft / derived-view separation.
+  pure-engine / mutable-draft / derived-view separation.
 
-The business logic is new, and is the point. See
-**[`docs/catering-engine.md`](docs/catering-engine.md)** for where every rule
-comes from.
+The business logic is new. See **[`docs/catering-engine.md`](docs/catering-engine.md)**
+for where every rule comes from, and **[`CLAUDE.md`](CLAUDE.md)** for how to add
+to this repo.
 
 ## Running it
 
 ```bash
 pnpm install
-pnpm dev          # http://127.0.0.1:5181
+pnpm dev         # http://127.0.0.1:5181
 pnpm typecheck
+pnpm test        # 26 assertions over the pure engine
 pnpm build
 ```
 
@@ -29,81 +36,63 @@ Arabic is at `/`, English at `/en`. No stored language preference — the URL
 prefix *is* the locale, so a shared link always opens in the language it was
 shared in.
 
-## What is here
+## Sections
 
 | Route | What it does |
 |---|---|
-| `/` | Season rollup: billable vs produced covers, revenue/cost/margin, daily kitchen load against capacity, blocking findings |
-| `/orders` | The service book. Guarantee state per order, cutoff countdown, per-order economics and staffing, add-a-service wizard |
+| `/inventory` | Stock, suppliers, pack price and yield. The EP unit cost every recipe downstream is costed from, plus a below-par reorder sheet and an add-ingredient wizard |
+| `/recipes` | Recipes as a bill of materials — lines as written (including sub-recipes) *and* the exploded raw requirement underneath |
 | `/menus` | Menu engineering: cost per cover vs price, food-cost % against target, one-click price-at-target |
-| `/recipes` | Recipes as a bill of materials — lines as written (incl. sub-recipes) *and* the exploded raw requirement underneath |
-| `/production` | The day's production sheet, aggregated across orders, grouped by station, with batch counts and same-day-only flags |
-| `/procurement` | Purchase list net of stock in whole packs with order-by dates, plus the stock table against par levels |
 | `/validation` | Every finding, click-through to the entity that caused it |
-| `/settings` | Operating policy — the six numbers the whole engine keys off |
+| `/settings` | Operating policy — the three numbers the engine keys off |
 
 ## Layout
 
 ```
 src/
-  lib/            pure engine — no React, no store, no i18next runtime
-    schemas.ts      the domain, as zod schemas
+  engine/         pure — plain records in, numbers out. No React, no store,
+    schemas.ts      no i18next. This is what `pnpm test` compiles and asserts.
     costing.ts      yield → EP cost → recipe explosion → cost per cover
-    planning.ts     covers, guarantees, production plans, purchase lists, staffing
+    inventory.ts    stock value, par-level reordering
     validation.ts   the rules, as Issues with stable codes
-    display.ts      formatting and enum option lists
-    intl.ts         per-locale Intl formatters (Gregorian + Latin digits in Arabic)
   store/          the mutable draft (valtio) + actions + seed
+  lib/            view helpers — formatting, Intl, class merging
   components/     shell (PageShell, NavRail, MasterDetail) and ui/ primitives
   routes/         one file per section
-  features/       flows that are bigger than a page (the add-service wizard)
+  features/       flows bigger than a page (the add-ingredient wizard)
   i18n/           locale-as-URL-prefix routing and the i18next bootstrap
+test/             node:test assertions against the compiled engine
 ```
 
-The boundary that matters: `lib/` takes plain records and returns numbers.
-It never reads the store, so the same functions serve the UI, a future export,
-and node tests. `store/` owns the draft and the actions. Screens derive; they
-do not cache.
-
-## Domain shape
-
-```
-supplier → ingredient → recipe ⇄ sub-recipe
-                            ↓
-                          menu → service order (BEO) → contract
-                            ↓                    ↓
-                     production plan  ────→ purchase list
-```
-
-A service order is one menu, at one site, on one date, for one meal period —
-the single sheet the kitchen, the service team and the invoice all read from.
+The boundary that matters: `engine/` never imports React, the store, or the
+view layer. That is not style — it is what lets the engine compile to plain ESM
+and be tested with no bundler, no DOM and no test framework. If a test ever
+needs a mock, something impure has leaked in.
 
 ## Seed data
 
-A worked Hajj season: two client contracts, five suppliers, sixteen
-ingredients, ten recipes (one a shared sub-recipe), four menus, and fifteen
-service orders straddling today. Dates are generated relative to today, so the
-seed never goes stale.
+A worked Hajj catalogue: five suppliers, sixteen ingredients, ten recipes (one
+a shared sub-recipe), four menus. Several rows are deliberately imperfect so the
+checks page has real findings on first run:
 
-Several rows are deliberately imperfect, so the checks page has real findings on
-first run rather than an empty state that proves nothing. It currently reports
-**~19 blocking and ~8 advisory** findings across ten distinct rules:
-
-- a lapsed halal certificate on the poultry supplier (compliance, blocking);
+- a lapsed halal certificate on the poultry supplier (blocking);
 - Arabic bread with no purchase price, so the breakfast menu costs light;
 - the premium lunch at ~41% food cost against a 30% target;
-- a service two days out with no guarantee, past its 72-hour cutoff;
-- tomorrow's two services together exceeding the kitchen's daily capacity;
-- short-lead items for the next few days already past their order-by date —
-  the operation is genuinely under-stocked going into the season, which is the
-  realistic picture and what the procurement page exists to surface.
+- fresh chicken below its par level.
 
-The four menus cost out at 13.3% / 20.1% / 41.1% / 29.0% food cost, so the
-menus page shows an under-costed one, two healthy ones, and one over target.
+Menus cost out at 13.3% / 20.1% / 41.1% / 29.0% food cost, so the menus page
+shows an under-costed one, two healthy ones, and one over target.
+
+## Branch state
+
+`main` holds the full scaffold — contracts, service orders and guarantees,
+production planning, demand-driven procurement, staffing, and a dashboard.
+`slim/mvp` cut all of it down to the three parts above. To bring a piece back,
+take it from `main` rather than rewriting it; the research behind it is retained
+in Appendix A of the engine doc.
 
 ## Known gaps
 
-Listed in full in [`docs/catering-engine.md` §7](docs/catering-engine.md). The
-short version: no persistence (the store is in-memory; shapes are 1:1 with
-`schemas.ts` so PocketBase drops in behind `store/ops.ts`), no labour costing,
-no invoicing, and no HACCP/temperature-log module.
+No persistence (the store is in-memory). No allergen check yet — the data is
+modelled, the rule is not. No HACCP/temperature-log module. Full list in
+[`docs/catering-engine.md` §7](docs/catering-engine.md).

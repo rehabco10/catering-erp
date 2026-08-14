@@ -1,0 +1,20 @@
+{
+  // Compiles the pure engine (src/engine) to plain ESM so `node --test` can run
+  // real assertions against it without a bundler, a DOM, or a test framework.
+  //
+  // This only works because src/engine is genuinely pure: no React, no store, no
+  // i18next runtime, and every intra-engine import already carries a `.js`
+  // extension. If a test ever needs a mock, that is the signal that something
+  // impure has leaked into the engine.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": ".tmp-test",
+    "rootDir": "src",
+    "types": []
+  },
+  "include": ["src/engine/**/*.ts"]
+}

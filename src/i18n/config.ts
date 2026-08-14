@@ -10,7 +10,7 @@ import enCopy from "@/locales/en/copy.json"
 import enValidation from "@/locales/en/validation.json"
 import { DEFAULT_LOCALE, localeFromPath, stripBase, type Locale } from "./locale"
 import { setIntlLocale } from "@/lib/intl"
-import { formatMessage, setEntityNameLocalizer, setMessageTranslator } from "@/lib/validation"
+import { formatMessage, setEntityNameLocalizer, setMessageTranslator } from "@/engine/validation"
 
 /**
  * The i18next runtime.

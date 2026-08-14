@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { NavLink, useLocation } from "react-router-dom"
-import { useSnapshot } from "valtio"
 import {
   BookOpen,
-  CalendarClock,
+  Boxes,
   ChefHat,
-  Flame,
-  LayoutDashboard,
   Menu,
   Settings,
   ShieldCheck,
-  ShoppingCart,
   type LucideIcon,
 } from "lucide-react"
 
@@ -20,7 +16,6 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { useLocaleNavigate, useLocalePath } from "@/i18n/LocaleProvider"
 import { withLocale } from "@/i18n/locale"
 import { SIDE_PANEL_QUERY, useMediaQuery } from "@/hooks/use-media-query"
-import { state } from "@/store/ops"
 import { useErrorCount } from "@/store/use-issues"
 import { cn, arNum } from "@/lib/utils"
 
@@ -34,16 +29,13 @@ interface Item {
 }
 
 /**
- * Ordered the way the work runs, not alphabetically: what was sold, what it is
- * made of, what has to be cooked, what has to be bought, then what is wrong.
+ * Ordered along the chain, not alphabetically: raw stock, what it is turned
+ * into, what that is sold as — then the checks over all three.
  */
 const ITEMS: Item[] = [
-  { to: "/", key: "dashboard", icon: LayoutDashboard },
-  { to: "/orders", key: "orders", icon: CalendarClock },
-  { to: "/menus", key: "menus", icon: BookOpen },
+  { to: "/inventory", key: "inventory", icon: Boxes },
   { to: "/recipes", key: "recipes", icon: ChefHat },
-  { to: "/production", key: "production", icon: Flame },
-  { to: "/procurement", key: "procurement", icon: ShoppingCart },
+  { to: "/menus", key: "menus", icon: BookOpen },
   { to: "/validation", key: "validation", icon: ShieldCheck, badge: true },
   { to: "/settings", key: "settings", icon: Settings },
 ]
@@ -65,7 +57,6 @@ export function Navigation() {
  * layout on the start edge at every breakpoint.
  */
 export function NavRail() {
-  const snap = useSnapshot(state)
   const errorCount = useErrorCount()
   const localePath = useLocalePath()
   const { t } = useTranslation()
@@ -88,14 +79,11 @@ export function NavRail() {
       <div className="relative flex flex-col items-center gap-1">
         {ITEMS.map((item, i) => (
           <div key={item.to} className="contents">
-            {/* Groups: overview | what was sold and what it is made of |
-                what has to happen | the checks. */}
-            {(i === 1 || i === 4 || i === 6) && (
-              <span className="my-1.5 h-px w-8 bg-white/15" />
-            )}
+            {/* Separates the three parts of the chain from the pages that
+                sit over all of them. */}
+            {i === 3 && <span className="my-1.5 h-px w-8 bg-white/15" />}
             <NavLink
               to={localePath(item.to)}
-              end={item.to === "/"}
               title={t(`nav.${item.key}`)}
               aria-label={t(`nav.${item.key}`)}
               className={({ isActive }) =>
@@ -134,13 +122,6 @@ export function NavRail() {
           </div>
         ))}
       </div>
-
-      <div className="relative mt-auto flex flex-col items-center gap-0.5 text-white/45">
-        <span className="text-[10px] font-semibold text-white/70 tabular-nums">
-          {String(snap.season.year_hijri)}
-        </span>
-        <span className="text-[9px] tabular-nums">{String(snap.season.year_gregorian)}</span>
-      </div>
     </nav>
   )
 }
@@ -148,7 +129,6 @@ export function NavRail() {
 /* ── narrow screens ─────────────────────────────────────────────── */
 
 function NavBurger() {
-  const snap = useSnapshot(state)
   const errorCount = useErrorCount()
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
@@ -161,7 +141,7 @@ function NavBurger() {
   // Match against the locale-stripped path so `/en/menus` still resolves to
   // the menus item.
   const bare = withLocale(pathname, "ar")
-  const current = ITEMS.find((i) => (i.to === "/" ? bare === "/" : bare.startsWith(i.to)))
+  const current = ITEMS.find((i) => bare.startsWith(i.to))
 
   return (
     <>
@@ -197,13 +177,10 @@ function NavBurger() {
         <DrawerContent className="bg-popover">
           <DrawerTitle className="border-b border-surface-line px-4 py-3 text-[13px] font-bold">
             {t("nav.sections")}
-            <span className="ms-2 text-[10px] font-normal text-muted-foreground tabular-nums">
-              {t("nav.season_badge", { year: String(snap.season.year_hijri) })}
-            </span>
           </DrawerTitle>
           <ul className="py-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             {ITEMS.map((item) => {
-              const active = item.to === "/" ? bare === "/" : bare.startsWith(item.to)
+              const active = bare.startsWith(item.to)
               return (
                 <li key={item.to}>
                   <button

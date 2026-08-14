@@ -3,8 +3,8 @@ import { useSnapshot } from "valtio"
 
 import { useLocale } from "@/i18n/LocaleProvider"
 import { catalogFrom, issuesFor, state } from "@/store/ops"
-import type { Catalog } from "@/lib/costing"
-import type { Issue } from "@/lib/validation"
+import type { Catalog } from "@/engine/costing"
+import type { Issue } from "@/engine/validation"
 
 /**
  * The single way to read validation results in a component.
@@ -20,14 +20,14 @@ import type { Issue } from "@/lib/validation"
  */
 export function useIssues(): Issue[] {
   const snap = useSnapshot(state)
-  const { ingredients, recipes, menus, contracts, orders, suppliers, policy } = snap
+  const { ingredients, recipes, menus, suppliers, policy } = snap
   // Messages are rendered in the interface language (the validation bridge),
   // so a language switch must recompute them even though no data changed.
   const locale = useLocale()
   return useMemo(
     () => issuesFor(state),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ingredients, recipes, menus, contracts, orders, suppliers, policy, locale],
+    [ingredients, recipes, menus, suppliers, policy, locale],
   )
 }
 

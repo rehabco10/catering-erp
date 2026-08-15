@@ -21,7 +21,8 @@
     "settings": "Settings",
     "settings_desc": "Pricing policy: the food-cost target, the Q factor, and VAT.",
     "inventory": "Stock & suppliers",
-    "inventory_desc": "Pack price and yield — the two numbers every recipe and menu downstream is costed from."
+    "inventory_desc": "Pack price and yield — the two numbers every recipe and menu downstream is costed from.",
+    "menus_graph_desc": "The tree from menu to dish — bar width is the dish’s share of the plate cost."
   },
   "meal": {
     "breakfast": "Breakfast",
@@ -114,7 +115,8 @@
     "pack_size": "Units per pack",
     "halal_critical": "Halal-critical",
     "per_portion": "Per portion",
-    "per_batch": "Per batch"
+    "per_batch": "Per batch",
+    "with_vat": "Incl. {pct}% VAT: {amount}"
   },
   "policy": {
     "target_food_cost_pct": "Target food cost",
@@ -134,14 +136,16 @@
     "finish": "Add",
     "search": "Search",
     "add_line": "Add to build",
-    "remove": "Remove"
+    "remove": "Remove",
+    "add_dish": "Add dish"
   },
   "empty": {
     "menus": "Select a menu to see its costing.",
     "recipes": "Select a recipe to see its bill of materials.",
     "inventory": "Select an ingredient to see its costing.",
     "no_results": "No matches.",
-    "build": "Nothing in the build yet."
+    "build": "Nothing in the build yet.",
+    "composition": "No dishes yet."
   },
   "inventory": {
     "reorder": "Below par"
@@ -164,10 +168,26 @@
   "section": {
     "build": "Build",
     "raw_requirement": "Raw requirement",
-    "used_by": "Used by"
+    "used_by": "Used by",
+    "composition": "Composition",
+    "pricing": "Pricing"
   },
   "group": {
     "ingredients": "Ingredients",
     "sub_recipes": "Sub-recipes"
+  },
+  "view": {
+    "label": "View",
+    "form": "Form",
+    "graph": "Graph"
+  },
+  "graph": {
+    "avg_food_cost": "Average",
+    "over_target": "{n} over target",
+    "menu_count": "{n, plural, =0 {no menus} one {# menu} other {# menus}}",
+    "dish_count": "{n, plural, =0 {no dishes} one {# dish} other {# dishes}}",
+    "fit_view": "Fit",
+    "unpin_all": "Unpin",
+    "pinned_hint": "Placed by hand — double-click to hand it back to the auto-layout."
   }
 }

@@ -82,7 +82,29 @@ without.
 
 **A page.** `PageShell` for a simple scrolling page, `PageHeader` +
 `MasterDetail` for a list/detail split. Selection goes in the URL, not in
-state — that is what lets a finding deep-link at the row that caused it.
+state — that is what lets a finding deep-link at the row that caused it. A
+*view mode* goes in the URL too (`?view=graph`), so a link carries which view
+the sender was looking at.
+
+**Anything on the canvas** (`src/features/menus/graph/`). Four rules that are
+not obvious and were each paid for once:
+
+- **Layout runs on structure only.** Hover and selection must never reach
+  `computeLayout` — routing them through that memo rebuilds every node and
+  re-runs the solver on each mouse-over, which reads as a flicker across the
+  whole canvas. Hover affordances are pure CSS (`group-hover`), never state.
+- **The solver wins, except during a drag.** `reconcileNodes` keeps React
+  Flow's position only while `dragging` is set. Anything cleverer (comparing
+  against a snapshot of the last layout) goes stale and pins every card to its
+  first position.
+- **Hand React Flow the same box the layout used.** Nodes carry explicit
+  `width`/`height` so nothing is measured and the two cannot disagree.
+- **Refit only when the shape changes**, and compute the branch rect yourself:
+  `fitView({nodes})` silently falls back to fitting everything, which zooms the
+  whole grid out on every expand.
+
+The canvas wrapper is `dir="ltr"` because React Flow's transform math needs it;
+each card sets its own direction from the locale.
 
 **A string.** Never hardcode user-facing text. Structured keys
 (`field.yield`) go in `src/locales/{ar,en}/ui.json`; one-off Arabic prose is

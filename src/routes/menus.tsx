@@ -1,38 +1,42 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
+import { useQueryState } from "nuqs"
 import { useSnapshot } from "valtio"
-import { Target, Trash2 } from "lucide-react"
+import { LayoutList, Network } from "lucide-react"
 
 import { MasterDetail } from "@/components/MasterDetail"
-import { Card, Note, PageHeader } from "@/components/PageShell"
-import { Button } from "@/components/ui/button"
-import { NumInput, SelectField, cellCls } from "@/components/ui/field"
+import { PageHeader } from "@/components/PageShell"
 import { FilterChips } from "@/components/ui/filter-chips"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { AddDishSheet } from "@/features/menus/AddDishSheet"
+import { MenuForm } from "@/features/menus/MenuForm"
+import { MenuGraph } from "@/features/menus/graph/MenuGraph"
 import { useLocale, useLocalePath } from "@/i18n/LocaleProvider"
-import { menuCost, menuVerdict, priceForTarget, recipeCost } from "@/engine/costing"
-import { dec2, foodCostTone, money, pct, pickName, toneClasses } from "@/lib/display"
+import { menuCost } from "@/engine/costing"
+import { foodCostTone, money, pct, pickName, toneClasses } from "@/lib/display"
 import type { MenuTierValue } from "@/engine/schemas"
 import { cn } from "@/lib/utils"
-import { addMenuItem, priceMenuAtTarget, removeMenuItem, state } from "@/store/ops"
+import { select, state, toggleExpandedMenu } from "@/store/ops"
 import { useCatalog } from "@/store/use-issues"
 
 /**
- * Menu engineering.
+ * Menus, two ways.
  *
- * The page is built around one direction of travel: cost is *discovered* by
- * exploding the recipes, the food-cost target is *policy*, and the price falls
- * out of the two. «تسعير على المستهدف» is that calculation as a button, so the
- * arithmetic nobody does by hand stops being optional.
+ * The same catalogue answers two different questions and they want different
+ * shapes:
+ *
+ *   **form** — "what exactly is in this menu and what does it sell for". A
+ *   list to pick from and a structured editor: identity, composition, pricing,
+ *   in the order the decisions are actually made.
+ *
+ *   **graph** — "which dish is eating the margin, and how does the catalogue
+ *   sit against the target". A composition question, so it gets a tree:
+ *   catalogue → tier → menu → dish, where the expensive branch is literally
+ *   wider. Modelled on the package wizard's canvas.
+ *
+ * The mode lives in the URL (`?view=`), so a link carries which view the sender
+ * was looking at — the graph is worth sending, and a mode kept in component
+ * state cannot be shared.
  */
 export function MenusPage() {
   const snap = useSnapshot(state)
@@ -42,7 +46,12 @@ export function MenusPage() {
   const navigate = useNavigate()
   const localePath = useLocalePath()
   const { menuId } = useParams()
+
+  const [view, setView] = useQueryState("view")
+  const graph = view === "graph"
+
   const [tier, setTier] = useState<MenuTierValue | null>(null)
+  const [addingTo, setAddingTo] = useState<string | null>(null)
 
   const costed = useMemo(
     () => snap.menus.map((m) => ({ menu: m, cost: menuCost(m.id, catalog) })),
@@ -52,276 +61,164 @@ export function MenusPage() {
   const selected = menuId ? snap.menus.find((m) => m.id === menuId) : undefined
   const go = (id: string | null) => navigate(localePath(id ? `/menus/${id}` : "/menus"))
 
+  /** Graph → form: open that menu's editor, and leave the canvas. */
+  const openFromGraph = (id: string) => {
+    void setView(null)
+    go(id)
+  }
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-page">
-      <PageHeader title={t("page.menus")} description={t("page.menus_desc")} />
-      <div className="min-h-0 flex-1 px-4 py-4">
-        <MasterDetail
-          detailOpen={Boolean(selected)}
-          onBack={() => go(null)}
-          placeholder={t("empty.menus")}
-          master={
-            <>
-              <FilterChips
-                value={tier}
-                onChange={setTier}
-                options={(["economy", "standard", "premium"] as MenuTierValue[]).map((v) => ({
-                  value: v,
-                  label: t(`tier.${v}`),
-                  count: costed.filter((c) => c.menu.tier === v).length,
-                }))}
-              />
-              {shown.map(({ menu, cost }) => {
-                const tone = toneClasses[foodCostTone(cost.foodCostPct, snap.policy.target_food_cost_pct)]
-                const active = menu.id === menuId
-                return (
-                  <button
-                    key={menu.id}
-                    type="button"
-                    onClick={() => go(menu.id)}
-                    className={cn(
-                      "block w-full rounded-xl border bg-surface-raised p-3 text-start shadow-[var(--elev-1)] transition-colors",
-                      active
-                        ? "border-[color:var(--brand-navy)] ring-1 ring-[color:var(--brand-navy)]"
-                        : "border-surface-line hover:bg-surface-sunken",
-                    )}
-                  >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-[13px] font-bold">{pickName(menu, locale)}</span>
-                      <span className="shrink-0 text-[10px] text-muted-foreground">
-                        {t(`tier.${menu.tier}`)}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {t(`meal.${menu.meal_period}`)} · {menu.items.length}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="text-[12px] tabular-nums">
-                        {money(cost.perCover)}
-                        <span className="text-muted-foreground">
-                          {" / "}
-                          {cost.pricePerCover === null ? "—" : money(cost.pricePerCover)}
+      <PageHeader
+        title={t("page.menus")}
+        description={t(graph ? "page.menus_graph_desc" : "page.menus_desc")}
+        actions={
+          <div
+            role="group"
+            aria-label={t("view.label")}
+            className="flex items-center rounded-lg border border-surface-line bg-surface-raised p-0.5"
+          >
+            <ModeButton
+              active={!graph}
+              label={t("view.form")}
+              onClick={() => void setView(null)}
+              icon={<LayoutList className="size-3.5" />}
+            />
+            <ModeButton
+              active={graph}
+              label={t("view.graph")}
+              onClick={() => {
+                // Entering the canvas with a menu already open should show that
+                // menu's branch, not a collapsed tree the user has to re-find.
+                if (selected) {
+                  select(selected.id)
+                  if (state.expandedMenuId !== selected.id) toggleExpandedMenu(selected.id)
+                }
+                void setView("graph")
+              }}
+              icon={<Network className="size-3.5" />}
+            />
+          </div>
+        }
+      />
+
+      {graph ? (
+        <div className="min-h-0 flex-1">
+          <MenuGraph onMenuActivated={openFromGraph} onAddDish={setAddingTo} />
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 px-4 py-4">
+          <MasterDetail
+            detailOpen={Boolean(selected)}
+            onBack={() => go(null)}
+            placeholder={t("empty.menus")}
+            master={
+              <>
+                <FilterChips
+                  value={tier}
+                  onChange={setTier}
+                  options={(["economy", "standard", "premium"] as MenuTierValue[])
+                    .map((v) => ({
+                      value: v,
+                      label: t(`tier.${v}`),
+                      count: costed.filter((c) => c.menu.tier === v).length,
+                    }))
+                    .filter((o) => o.count > 0)}
+                />
+                {shown.map(({ menu, cost }) => {
+                  const tone =
+                    toneClasses[
+                      foodCostTone(cost.foodCostPct, snap.policy.target_food_cost_pct)
+                    ]
+                  return (
+                    <button
+                      key={menu.id}
+                      type="button"
+                      onClick={() => go(menu.id)}
+                      className={cn(
+                        "block w-full rounded-xl border bg-surface-raised p-3 text-start shadow-[var(--elev-1)] transition-colors",
+                        menu.id === menuId
+                          ? "border-[color:var(--brand-navy)] ring-1 ring-[color:var(--brand-navy)]"
+                          : "border-surface-line hover:bg-surface-sunken",
+                      )}
+                    >
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="truncate text-[13px] font-bold">
+                          {pickName(menu, locale)}
                         </span>
-                      </span>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums",
-                          tone.bg,
-                          tone.fg,
-                        )}
-                      >
-                        {pct(cost.foodCostPct)}
-                      </span>
-                    </div>
-                  </button>
-                )
-              })}
-            </>
-          }
-          detail={selected ? <MenuDetail menuId={selected.id} /> : null}
-        />
-      </div>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {t(`tier.${menu.tier}`)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {t(`meal.${menu.meal_period}`)} · {t("graph.dish_count", { n: menu.items.length })}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <span className="text-[12px] tabular-nums">
+                          {money(cost.perCover)}
+                          <span className="text-muted-foreground">
+                            {" / "}
+                            {cost.pricePerCover === null ? "—" : money(cost.pricePerCover)}
+                          </span>
+                        </span>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums",
+                            tone.bg,
+                            tone.fg,
+                          )}
+                        >
+                          {pct(cost.foodCostPct)}
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </>
+            }
+            detail={
+              selected ? <MenuForm menuId={selected.id} onAddDish={setAddingTo} /> : null
+            }
+          />
+        </div>
+      )}
+
+      {/* One picker for both modes — the canvas (+) and the form button open
+          the same sheet, so adding a dish is one flow however you got here. */}
+      <AddDishSheet
+        menuId={addingTo}
+        open={addingTo !== null}
+        onOpenChange={(o) => !o && setAddingTo(null)}
+      />
     </div>
   )
 }
 
-/* ── detail ─────────────────────────────────────────────────────── */
-
-function MenuDetail({ menuId }: { menuId: string }) {
-  const snap = useSnapshot(state)
-  const { t } = useTranslation()
-  const locale = useLocale()
-  const catalog = useCatalog()
-  const menu = snap.menus.find((m) => m.id === menuId)
-  const [adding, setAdding] = useState("")
-
-  if (!menu) return null
-  const cost = menuCost(menuId, catalog)
-  const verdict = menuVerdict(cost, snap.policy)
-  const suggested = priceForTarget(cost.perCover, snap.policy.target_food_cost_pct)
-  const tone = toneClasses[foodCostTone(cost.foodCostPct, snap.policy.target_food_cost_pct)]
-
-  const unused = snap.recipes
-    .filter((r) => !menu.items.some((i) => i.recipe === r.id))
-    .map((r) => ({ value: r.id, label: pickName(r, locale) }))
-
+function ModeButton({
+  active,
+  label,
+  icon,
+  onClick,
+}: {
+  active: boolean
+  label: string
+  icon: React.ReactNode
+  onClick: () => void
+}) {
   return (
-    <>
-      <Card
-        title={pickName(menu, locale)}
-        description={`${t(`tier.${menu.tier}`)} · ${t(`meal.${menu.meal_period}`)}`}
-        actions={
-          <Button size="sm" variant="outline" onClick={() => priceMenuAtTarget(menuId)}>
-            <Target className="size-3.5" />
-            {t("action.price_at_target")}
-          </Button>
-        }
-      >
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div>
-            <div className="text-[11px] text-muted-foreground">{t("field.cost")}</div>
-            <div className="mt-0.5 text-[15px] font-bold tabular-nums">
-              {money(cost.perCover)}
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground">{t("field.price")}</div>
-            <div className="mt-1">
-              <NumInput
-                value={menu.price_per_cover_sar ?? ""}
-                onChange={(e) => {
-                  const live = state.menus.find((m) => m.id === menuId)
-                  if (live) live.price_per_cover_sar = Number(e.target.value) || null
-                }}
-              />
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground">{t("field.food_cost_pct")}</div>
-            <div
-              className={cn(
-                "mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[15px] font-bold tabular-nums",
-                tone.bg,
-                tone.fg,
-              )}
-            >
-              {pct(cost.foodCostPct)}
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground">{t("field.margin")}</div>
-            <div
-              className={cn(
-                "mt-0.5 text-[15px] font-bold tabular-nums",
-                (cost.marginPerCover ?? 0) < 0 && "text-[color:var(--brand-ruby-deep)]",
-              )}
-            >
-              {cost.marginPerCover === null ? "—" : money(cost.marginPerCover)}
-            </div>
-          </div>
-        </div>
-
-        {verdict === "loss" || verdict === "over_target" ? (
-          <Note tone="warn">
-            {t("action.price_at_target")}: {money(suggested)}
-          </Note>
-        ) : (
-          <Note tone="brand">
-            {t("التكلفة تُكتشَف، والمستهدف سياسة، والسعر ينتج عنهما — لا العكس.")}
-          </Note>
-        )}
-      </Card>
-
-      <Card
-        title={t("nav.recipes")}
-        actions={
-          <div className="flex items-center gap-1.5">
-            <SelectField
-              value={adding}
-              onChange={setAdding}
-              options={unused}
-              className="w-44"
-              placeholder={t("action.add_recipe")}
-            />
-            <Button
-              size="sm"
-              disabled={!adding}
-              onClick={() => {
-                addMenuItem(menuId, adding)
-                setAdding("")
-              }}
-            >
-              {t("action.finish")}
-            </Button>
-          </div>
-        }
-        bodyClassName="p-0"
-      >
-        <Table className="min-w-[34rem]">
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("nav.recipes")}</TableHead>
-              <TableHead>{t("field.station")}</TableHead>
-              <TableHead className="text-end">{t("field.portions_per_cover")}</TableHead>
-              <TableHead className="text-end">{t("field.cost")}</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {menu.items.map((item) => {
-              const recipe = snap.recipes.find((r) => r.id === item.recipe)
-              const rc = recipeCost(item.recipe, catalog)
-              return (
-                <TableRow key={item.id}>
-                  <TableCell className="px-2.5 text-[12px] font-medium">
-                    {recipe ? pickName(recipe, locale) : item.recipe}
-                  </TableCell>
-                  <TableCell className="px-2.5 text-[11px] text-muted-foreground">
-                    {recipe ? t(`station.${recipe.station}`) : "—"}
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <input
-                      className={cn(cellCls, "w-16 rounded-md border text-end tabular-nums")}
-                      dir="ltr"
-                      value={item.portions_per_cover}
-                      onChange={(e) => {
-                        const live = state.menus
-                          .find((m) => m.id === menuId)
-                          ?.items.find((x) => x.id === item.id)
-                        if (live) live.portions_per_cover = Number(e.target.value) || 0
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
-                    {money(rc.perPortion * item.portions_per_cover)}
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={t("action.finish")}
-                      onClick={() => removeMenuItem(menuId, item.id)}
-                    >
-                      <Trash2 className="size-3.5 text-muted-foreground" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-          <TableFooter>
-            <TableRow>
-              <TableCell className="px-2.5 text-[12px] font-semibold" colSpan={3}>
-                {t("policy.q_factor_pct")} ({dec2(snap.policy.q_factor_pct)}%)
-              </TableCell>
-              <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
-                {money(cost.qFactorPerCover)}
-              </TableCell>
-              <TableCell />
-            </TableRow>
-            <TableRow>
-              <TableCell className="px-2.5 text-[12px] font-bold" colSpan={3}>
-                {t("field.cost")}
-              </TableCell>
-              <TableCell className="px-2.5 text-end text-[12px] font-bold tabular-nums">
-                {money(cost.perCover)}
-              </TableCell>
-              <TableCell />
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </Card>
-
-      {cost.gaps.unpricedIngredients.length > 0 && (
-        <Card title={t("issue.supply")}>
-          <ul className="space-y-1 text-[12px] text-muted-foreground">
-            {cost.gaps.unpricedIngredients.map((id) => {
-              const ing = snap.ingredients.find((x) => x.id === id)
-              return <li key={id}>· {ing ? pickName(ing, locale) : id}</li>
-            })}
-          </ul>
-        </Card>
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors",
+        active
+          ? "bg-[color:var(--brand-navy)] text-white shadow-[var(--elev-1)]"
+          : "text-muted-foreground hover:bg-surface-sunken",
       )}
-    </>
+    >
+      {icon}
+      {label}
+    </button>
   )
 }

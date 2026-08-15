@@ -42,7 +42,7 @@ shared in.
 |---|---|
 | `/inventory` | Stock, suppliers, pack price and yield. The EP unit cost every recipe downstream is costed from, plus a below-par reorder sheet and an add-ingredient wizard |
 | `/recipes` | Recipes as a bill of materials — lines as written (including sub-recipes) *and* the exploded raw requirement underneath |
-| `/menus` | Menu engineering: cost per cover vs price, food-cost % against target, one-click price-at-target |
+| `/menus` | Two modes. **Form** — identity, composition, pricing, in the order the decisions are made. **Graph** (`?view=graph`) — the catalogue as a tree, catalogue → tier → menu → dish, where a dish's bar is its share of the plate cost |
 | `/validation` | Every finding, click-through to the entity that caused it |
 | `/settings` | Operating policy — the three numbers the engine keys off |
 

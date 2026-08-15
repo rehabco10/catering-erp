@@ -28,6 +28,20 @@ export interface OpsState {
   ingredients: Ingredient[]
   recipes: Recipe[]
   menus: Menu[]
+  /* ── canvas state ──────────────────────────────────────────────
+   * Only the graph mode on /menus reads these. They live in the store
+   * rather than in the canvas component so that switching to form mode and
+   * back does not discard where the user parked their cards. */
+  /** Node currently inspected — a menu id, a dish id, or `"root"`. */
+  selectedId: string
+  /**
+   * The one menu whose dishes render on the canvas — accordion, not a set.
+   * Every menu's dishes at once is a smear at fit-view zoom, and the tree
+   * reads as menu cards with one branch open.
+   */
+  expandedMenuId: string | null
+  /** Nodes the user has dragged; re-layout leaves these alone. */
+  pinned: Record<string, { x: number; y: number }>
 }
 
 export const state = proxy<OpsState>({
@@ -36,6 +50,9 @@ export const state = proxy<OpsState>({
   ingredients: SEED_INGREDIENTS,
   recipes: SEED_RECIPES,
   menus: SEED_MENUS,
+  selectedId: "root",
+  expandedMenuId: null,
+  pinned: {},
 })
 
 /* ── ids ────────────────────────────────────────────────────────── */
@@ -146,7 +163,52 @@ export function removeRecipe(recipeId: string): { ok: boolean; usedBy: number } 
   return { ok: true, usedBy: 0 }
 }
 
+/* ── actions: canvas ────────────────────────────────────────────── */
+
+export function select(id: string) {
+  state.selectedId = id
+}
+
+/** Accordion toggle: open this menu's branch, closing whichever was open. */
+export function toggleExpandedMenu(id: string) {
+  state.expandedMenuId = state.expandedMenuId === id ? null : id
+}
+
+export function pinNode(id: string, x: number, y: number) {
+  state.pinned[id] = { x, y }
+}
+
+export function unpinNode(id: string) {
+  delete state.pinned[id]
+}
+
+export function unpinAll() {
+  state.pinned = {}
+}
+
 /* ── actions: menus ─────────────────────────────────────────────── */
+
+/**
+ * A new menu starts empty and unpriced: the price is derived from what goes
+ * into it, so quoting before composing is the mistake the whole page exists to
+ * prevent.
+ */
+export function addMenu(tier: Menu["tier"] = "standard", meal: Menu["meal_period"] = "lunch"): string {
+  const id = nextId("menu")
+  const n = state.menus.filter((m) => m.tier === tier).length + 1
+  state.menus.push({
+    id,
+    name_ar: `قائمة ${n}`,
+    name_en: `Menu ${n}`,
+    tier,
+    meal_period: meal,
+    items: [],
+    price_per_cover_sar: null,
+  })
+  state.selectedId = id
+  state.expandedMenuId = id
+  return id
+}
 
 export function addMenuItem(menuId: string, recipeId: string, portionsPerCover = 1) {
   const menu = menuById(menuId)

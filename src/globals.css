@@ -265,4 +265,24 @@ body,
   .no-trim * {
     text-box-trim: none;
   }
+
+  /* ── the menu canvas (features/menus/graph) ─────────────────────
+   * Animate transform so the re-layout on every expand/collapse glides
+   * instead of teleporting. The wrapper div is what React Flow translates,
+   * so the transition lives there. */
+  .react-flow__node {
+    transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+    /* The floating (+) sits outside the card bounds — the node wrapper must
+     * not clip it. */
+    overflow: visible;
+  }
+  /* Cards here ARE draggable, so this matters: React Flow adds `.dragging`
+   * for the duration of a drag and the node must track the pointer exactly
+   * rather than easing behind it. */
+  .react-flow__node.dragging,
+  /* A hand-placed node keeps its spot through re-layouts; easing it would
+   * suggest the solver was still moving it. */
+  .react-flow__node.is-pinned {
+    transition: none;
+  }
 }

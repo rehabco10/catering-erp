@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table"
 import { AddLineSheet } from "@/features/recipes/AddLineSheet"
 import { useLocale, useLocalePath } from "@/i18n/LocaleProvider"
-import { apUnitCost, epUnitCost, explodeRecipe, recipeCost } from "@/engine/costing"
+import { costingVariant, explodeRecipe, itemUnitCost, recipeCost } from "@/engine/costing"
 import { dec2, int, money, pickName } from "@/lib/display"
 import type { StationValue } from "@/engine/schemas"
 import { cn } from "@/lib/utils"
@@ -209,20 +209,22 @@ function CostingCard({ recipeId }: { recipeId: string }) {
           <ul className="divide-y divide-surface-line">
             {recipe.lines.map((line) => {
               const sub = line.kind === "recipe"
-              const ingredient = sub ? undefined : snap.ingredients.find((x) => x.id === line.ref)
+              const item = sub ? undefined : snap.items.find((x) => x.id === line.ref)
               const child = sub ? snap.recipes.find((x) => x.id === line.ref) : undefined
+              // Items price through their costing basis, never through a
+              // variant the recipe chose — that decision belongs to the item.
               const unitCost = sub
                 ? recipeCost(line.ref, catalog).perPortion
-                : ingredient
-                  ? epUnitCost(ingredient)
+                : item
+                  ? itemUnitCost(item.id, catalog)
                   : null
-              const unit = sub ? t("unit.portion") : ingredient ? t(`unit.${ingredient.base_unit}`) : ""
+              const unit = sub ? t("unit.portion") : item ? t(`unit.${item.base_unit}`) : ""
               const label = sub
                 ? child
                   ? pickName(child, locale)
                   : line.ref
-                : ingredient
-                  ? pickName(ingredient, locale)
+                : item
+                  ? pickName(item, locale)
                   : line.ref
 
               return (
@@ -239,7 +241,7 @@ function CostingCard({ recipeId }: { recipeId: string }) {
                         className="size-3.5 shrink-0 text-[color:var(--brand-navy)]"
                       />
                     )}
-                    <span className={cn("truncate text-[13px]", !ingredient && !child && "text-[color:var(--brand-ruby-deep)]")}>
+                    <span className={cn("truncate text-[13px]", !item && !child && "text-[color:var(--brand-ruby-deep)]")}>
                       {label}
                     </span>
                   </span>
@@ -293,11 +295,11 @@ function CostingCard({ recipeId }: { recipeId: string }) {
             </div>
           </div>
 
-          {cost.gaps.unpricedIngredients.length > 0 && (
+          {[...cost.gaps.unpricedItems, ...cost.gaps.itemsWithoutPreferred].length > 0 && (
             <Note tone="warn" icon={<AlertTriangle className="size-3.5" />}>
-              {cost.gaps.unpricedIngredients
+              {[...cost.gaps.unpricedItems, ...cost.gaps.itemsWithoutPreferred]
                 .map((id) => {
-                  const x = snap.ingredients.find((i) => i.id === id)
+                  const x = snap.items.find((i) => i.id === id)
                   return x ? pickName(x, locale) : id
                 })
                 .join("، ")}
@@ -319,29 +321,34 @@ function CostingCard({ recipeId }: { recipeId: string }) {
         <Table className="min-w-[28rem]">
           <TableHeader>
             <TableRow>
-              <TableHead>{t("group.ingredients")}</TableHead>
+              <TableHead>{t("group.items")}</TableHead>
               <TableHead className="text-end">{t("field.per_batch")}</TableHead>
-              <TableHead className="text-end">{t("field.ap_cost")}</TableHead>
               <TableHead className="text-end">{t("field.ep_cost")}</TableHead>
+              <TableHead className="text-end">{t("field.cost")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {[...exploded.requirements.entries()].map(([id, qty]) => {
-              const ing = snap.ingredients.find((x) => x.id === id)
-              if (!ing) return null
-              const ap = apUnitCost(ing)
-              const ep = epUnitCost(ing)
+              const reqItem = snap.items.find((x) => x.id === id)
+              if (!reqItem) return null
+              const basis = costingVariant(id, catalog)
+              const ep = itemUnitCost(id, catalog)
               return (
                 <TableRow key={id}>
-                  <TableCell className="px-2.5 text-[12px]">{pickName(ing, locale)}</TableCell>
-                  <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
-                    {dec2(qty)} {t(`unit.${ing.base_unit}`)}
+                  <TableCell className="px-2.5 text-[12px]">
+                    {pickName(reqItem, locale)}
+                    <span className="block text-[10px] text-muted-foreground">
+                      {basis ? pickName(basis, locale) : t("field.no_basis")}
+                    </span>
                   </TableCell>
-                  <TableCell className="px-2.5 text-end text-[11px] text-muted-foreground tabular-nums">
-                    {ap === null ? "—" : money(ap)}
+                  <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
+                    {dec2(qty)} {t(`unit.${reqItem.base_unit}`)}
                   </TableCell>
                   <TableCell className="px-2.5 text-end text-[11px] tabular-nums">
                     {ep === null ? "—" : money(ep)}
+                  </TableCell>
+                  <TableCell className="px-2.5 text-end text-[12px] font-medium tabular-nums">
+                    {ep === null ? "—" : money(ep * qty)}
                   </TableCell>
                 </TableRow>
               )

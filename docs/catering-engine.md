@@ -12,6 +12,34 @@ procurement, staffing — was cut on `slim/mvp`; its research is kept in
 
 ---
 
+## 0. Items and purchase variants
+
+An **item** is what a recipe consumes — "6 kg basmati rice". A **variant** is a
+way of buying it — "Al-Moun 20 kg sack, 96 SAR, 100% yield". Supplier, pack,
+price, **yield**, storage and stock live on the variant, because those are
+exactly the fields that differ between two ways of buying the same thing.
+
+Yield in particular belongs there and nowhere else: whole chicken trims to
+~72%, boned breast to ~98%. Same item, different form, different cost per
+usable kilo.
+
+One variant is the item's **costing basis** (`preferred_variant`), chosen
+explicitly. Everything downstream prices through it.
+
+- A "cheapest wins" rule was rejected: it would silently re-cost every menu
+  touching the item the moment a supplier lists a cheap SKU, and menu prices are
+  quoted to clients. `preferredPremium` reports the gap instead, and
+  `item.cheaper_variant_available` raises it above 5%.
+- Deleting the basis **nulls the pointer** rather than repointing at a sibling.
+  Repointing moves money without anyone asking; `item.no_preferred` is blocking,
+  which is the right amount of noise.
+- **Par is on the item, stock is on the variant.** The kitchen runs out of
+  *rice*, not of *Al-Moun rice*; the shelf holds specific packs. Shortfall is
+  measured on summed stock and bought as packs of the basis.
+
+→ `costing.ts :: costingVariant`, `itemUnitCost`, `cheapestVariant`;
+`inventory.ts :: itemOnHand`, `preferredPremium`
+
 ## 1. As-purchased vs edible portion
 
 Invoices are for as-purchased weight; recipes consume edible portions. The gap
@@ -34,9 +62,11 @@ The inverse matters just as much for buying: to end up with 100 kg on the plate
 from a 68%-yield item you must **buy 147 kg**. Ordering the recipe quantity of a
 low-yield item buys two-thirds of a service.
 
-An unpriced ingredient returns `null`, not `0`. It contributes nothing to a
-cost and is named in `gaps.unpricedIngredients` — a zero that announces itself,
-rather than a total that quietly reads as cheap.
+An unpriced variant returns `null`, not `0`. It contributes nothing to a cost
+and is named in `gaps.unpricedItems` — a zero that announces itself, rather than
+a total that quietly reads as cheap. An item with no basis at all is reported
+separately in `gaps.itemsWithoutPreferred`, because the fix is different: pick a
+variant, versus fill in a price.
 
 ## 2. Bill of materials, not a shopping list
 
@@ -74,15 +104,16 @@ out unprofitable. Typical food-cost targets: fine dining 25–32%, fast-casual
 «تسعير على المستهدف» button on the menus page.
 
 `menuVerdict` uses a ±2-point band around the target — tighter than that and
-every menu reads as off-target from ordinary ingredient price drift. Below the
+every menu reads as off-target from ordinary supplier price drift. Below the
 band is `under_target`, which is reported as *good*: it is margin the operation
 keeps, and flagging it is what prompts someone to check the portion spec rather
 than assume a windfall.
 
 ## 5. Stock and reordering
 
-`on_hand` and `par_level` are **as-purchased** quantities, so the shortfall
-needs no yield conversion. Yield only enters when recipes consume the stock.
+`on_hand` (per variant) and `par_level` (per item) are **as-purchased**
+quantities, so the shortfall needs no yield conversion. Yield only enters when
+recipes consume the stock.
 
 ```
 shortfall = max(0, par_level − on_hand)
@@ -99,22 +130,26 @@ A par level is how a kitchen **without a forecast** decides what to buy. It
 answers "what is missing", never "what is coming" — the demand-driven version
 that answered the second question is in Appendix A.4.
 
-Stock is valued at **EP** prices (`inventoryValue`): a store holding 100 kg of a
-68%-yield item holds 68 kg of usable food, and valuing it at the invoice price
-overstates what the kitchen can get out of it.
+Stock is valued at **EP** prices (`inventoryValue`), summed **per variant at
+its own price and yield**: a store holding 100 kg of a 68%-yield form holds
+68 kg of usable food, and two ways of buying one item can sit on the shelf
+together at different costs. Blending them would misstate both.
 
 ## 6. Compliance
 
 Scoped to what the engine can check mechanically.
 
-- **Halal certification.** Ingredients carry `halal_critical`; suppliers carry
-  `halal_cert_no` and `halal_cert_expiry`. A critical ingredient sourced from a
-  supplier with no certificate, or a lapsed one, is **blocking**. For Hajj
+- **Halal certification.** Items carry `halal_critical`; suppliers carry
+  `halal_cert_no` and `halal_cert_expiry`; the supplier link is on the
+  **variant**. A halal-critical item with a variant whose supplier has no
+  certificate, or a lapsed one, is **blocking** — checked on every variant, not
+  only the basis, because an uncertified pack is stock you may be holding
+  whichever one prices the recipes. For Hajj
   operations this is not optional: catering companies work under SFDA and
   Ministry of Hajj and Umrah supervision, meat must come from certified halal
   suppliers, and kitchens are audited with daily random sampling during Hajj
   week.
-- **Allergens** are a flat enum on the ingredient (the nine declarable ones), so
+- **Allergens** are a flat enum on the item (the nine declarable ones), so
   a menu can be checked against a stated restriction mechanically rather than by
   reading free text. *The check itself is not written yet* — the data is in
   place, the rule is not.

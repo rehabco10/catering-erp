@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "preview:stage": "vite preview --mode staging --port 4174",
     "typecheck": "tsc -b --noEmit",
-    "test": "tsc -p tsconfig.test.json && node --test test/*.test.mjs"
+    "test": "tsc -p tsconfig.test.json && node --test test/*.test.mjs",
+    "shot": "node scripts/shot.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -41,6 +42,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "puppeteer-core": "^25.7.0",
     "typescript": "~6.0.2",
     "vite": "^8.0.4"
   },

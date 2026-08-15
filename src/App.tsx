@@ -37,11 +37,7 @@ function LocaleShell({ locale }: { locale: Locale }) {
 const sections = (locale: Locale) => [
   <Route key={`${locale}-home`} index element={<Navigate to="inventory" replace />} />,
   <Route key={`${locale}-inventory`} path="inventory" element={<InventoryPage />} />,
-  <Route
-    key={`${locale}-ingredient`}
-    path="inventory/:ingredientId"
-    element={<InventoryPage />}
-  />,
+  <Route key={`${locale}-item`} path="inventory/:itemId" element={<InventoryPage />} />,
   <Route key={`${locale}-recipes`} path="recipes" element={<RecipesPage />} />,
   <Route key={`${locale}-recipe`} path="recipes/:recipeId" element={<RecipesPage />} />,
   <Route key={`${locale}-menus`} path="menus" element={<MenusPage />} />,

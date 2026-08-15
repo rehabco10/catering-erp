@@ -4,10 +4,16 @@ REHAB catering catalogue. Three parts, in dependency order:
 
 ```
 inventory  →  recipes  →  menus
-(stock,       (bill of     (what a cover
- yields,       materials,   costs and
- suppliers)    sub-recipes) what it sells for)
+(items and    (bill of     (what a cover
+ the variants  materials,   costs and
+ you buy them  sub-recipes) what it sells for)
+ as)
 ```
+
+An **item** is what a recipe asks for; a **variant** is a way of buying it,
+carrying the supplier, pack, price, yield and stock. One variant per item is
+the **costing basis** and prices everything downstream. Never let a recipe
+reference a variant.
 
 Everything else — contracts, service orders, guarantees, production plans,
 procurement against demand, staffing — was cut on `slim/mvp` and is on `main`
@@ -20,11 +26,18 @@ pnpm dev         # http://127.0.0.1:5181
 pnpm typecheck   # tsc -b --noEmit
 pnpm test        # compiles src/engine, runs node --test
 pnpm build       # typecheck + vite build
+pnpm shot "/menus?view=graph" menus-graph   # headless render check
 ```
 
-Run `pnpm typecheck && pnpm test` before saying a change works. There is no
-browser-render check in this repo, so "it builds" is not "it renders" — say
-which one you verified.
+Run `pnpm typecheck && pnpm test` before saying a change works — and for
+anything that touches a page, `pnpm shot` too, with the dev server up. Those
+three catch different things and none of them substitutes for another: the
+route-param rename that broke `/inventory/:id` typechecked and tested clean,
+and only the screenshot showed the detail pane sitting empty.
+
+`pnpm shot` fails on any console error, failed request or unhandled rejection,
+and reports node/edge counts plus anything that looks like an untranslated
+`some.key`. Screenshots land in `screenshots/` (gitignored).
 
 ## The boundary
 
@@ -73,7 +86,7 @@ to `src/locales/en/validation.json` so English is not left rendering Arabic.
 If the finding points at an entity, make sure `ROUTE_FOR` in
 `src/routes/routes.tsx` can link to it.
 
-**An "add X" flow.** Copy `src/features/inventory/AddIngredientWizard.tsx`.
+**An "add X" flow.** Copy `src/features/inventory/AddItemWizard.tsx`.
 `FormWizard` inside `ResponsivePanel` is the house pattern: a side sheet where
 there is horizontal room, a swipeable drawer in narrow portrait. The draft
 lives in the component, never in the store, so an abandoned wizard leaves

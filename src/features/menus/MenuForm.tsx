@@ -250,11 +250,11 @@ export function MenuForm({
           </Note>
         )}
 
-        {cost.gaps.unpricedIngredients.length > 0 && (
+        {[...cost.gaps.unpricedItems, ...cost.gaps.itemsWithoutPreferred].length > 0 && (
           <Note tone="warn" icon={<AlertTriangle className="size-3.5" />}>
-            {cost.gaps.unpricedIngredients
+            {[...cost.gaps.unpricedItems, ...cost.gaps.itemsWithoutPreferred]
               .map((id) => {
-                const x = snap.ingredients.find((i) => i.id === id)
+                const x = snap.items.find((i) => i.id === id)
                 return x ? pickName(x, locale) : id
               })
               .join("، ")}

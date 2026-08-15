@@ -4,14 +4,23 @@ import assert from "node:assert/strict"
 import {
   apQtyFor,
   apUnitCost,
+  cheapestVariant,
+  costingVariant,
   epUnitCost,
   explodeRecipe,
+  itemUnitCost,
   menuCost,
   menuVerdict,
   priceForTarget,
   recipeCost,
 } from "../.tmp-test/engine/costing.js"
-import { inventoryValue, reorderList, shiftDate } from "../.tmp-test/engine/inventory.js"
+import {
+  inventoryValue,
+  itemOnHand,
+  preferredPremium,
+  reorderList,
+  shiftDate,
+} from "../.tmp-test/engine/inventory.js"
 import { validateCatalogue } from "../.tmp-test/engine/validation.js"
 
 /**
@@ -26,21 +35,29 @@ import { validateCatalogue } from "../.tmp-test/engine/validation.js"
 
 const POLICY = { target_food_cost_pct: 30, q_factor_pct: 7, vat_pct: 15 }
 
-const ing = (over) => ({
+const item = (over) => ({
   name_ar: over.id,
   name_en: over.id,
   category: "dry_goods",
-  storage: "dry",
   base_unit: "kg",
+  allergens: [],
+  halal_critical: false,
+  par_level: 0,
+  preferred_variant: null,
+  ...over,
+})
+
+const variant = (over) => ({
+  name_ar: over.id,
+  name_en: over.id,
+  supplier: "sup",
+  supplier_ref: null,
   pack_unit: "sack",
   pack_size: 20,
   ap_cost_sar: 100,
   yield_pct: 100,
-  allergens: [],
+  storage: "dry",
   on_hand: 0,
-  par_level: 0,
-  supplier: "sup",
-  halal_critical: false,
   ...over,
 })
 
@@ -57,33 +74,61 @@ const recipe = (over) => ({
   ...over,
 })
 
-/** A catalogue with one sub-recipe, one dish that uses it, and one menu. */
-function fixture(overrides = {}) {
-  const ingredients = new Map([
+/** Build a catalog from flat item/variant lists, indexing as the store does. */
+function build(items, variants, recipes, menus) {
+  const variantsByItem = new Map()
+  for (const v of variants) {
+    const list = variantsByItem.get(v.item)
+    if (list) list.push(v)
+    else variantsByItem.set(v.item, [v])
+  }
+  return {
+    items: new Map(items.map((i) => [i.id, i])),
+    variants: new Map(variants.map((v) => [v.id, v])),
+    variantsByItem,
+    recipes: new Map(recipes.map((r) => [r.id, r])),
+    menus: new Map(menus.map((m) => [m.id, m])),
+    policy: POLICY,
+  }
+}
+
+/**
+ * One dish, one sub-recipe, one menu — plus chicken carrying two purchase
+ * variants, which is what most of the item/variant assertions turn on.
+ */
+function fixture() {
+  const items = [
+    item({ id: "chicken", category: "protein", halal_critical: true, preferred_variant: "chicken_fresh" }),
+    item({ id: "rice", preferred_variant: "rice_20" }),
+    item({ id: "spice", preferred_variant: "spice_1" }),
+  ]
+  const variants = [
     // 10 kg case at 185 → 18.50/kg as purchased; 72% yield → 25.694/kg edible
-    ["chicken", ing({ id: "chicken", pack_size: 10, ap_cost_sar: 185, yield_pct: 72, category: "protein", halal_critical: true })],
-    ["rice", ing({ id: "rice", pack_size: 20, ap_cost_sar: 96 })],
-    ["spice", ing({ id: "spice", pack_size: 1, ap_cost_sar: 45 })],
-  ])
-  const recipes = new Map([
-    ["mix", recipe({ id: "mix", yield_portions: 200, prep_minutes: 25, lines: [{ id: "a", kind: "ingredient", ref: "spice", qty: 0.9 }] })],
-    ["kabsa", recipe({
+    variant({ id: "chicken_fresh", item: "chicken", pack_size: 10, ap_cost_sar: 185, yield_pct: 72, storage: "chilled" }),
+    // Dearer per pack but a better yield: 210/12 = 17.50 → /0.74 = 23.65/kg edible
+    variant({ id: "chicken_frozen", item: "chicken", pack_size: 12, ap_cost_sar: 210, yield_pct: 74, storage: "frozen" }),
+    variant({ id: "rice_20", item: "rice", pack_size: 20, ap_cost_sar: 96 }),
+    variant({ id: "spice_1", item: "spice", pack_size: 1, ap_cost_sar: 45 }),
+  ]
+  const recipes = [
+    recipe({ id: "mix", yield_portions: 200, prep_minutes: 25, lines: [{ id: "a", kind: "item", ref: "spice", qty: 0.9 }] }),
+    recipe({
       id: "kabsa", yield_portions: 40, prep_minutes: 95,
       lines: [
-        { id: "b", kind: "ingredient", ref: "rice", qty: 6 },
-        { id: "c", kind: "ingredient", ref: "chicken", qty: 9 },
+        { id: "b", kind: "item", ref: "rice", qty: 6 },
+        { id: "c", kind: "item", ref: "chicken", qty: 9 },
         { id: "d", kind: "recipe", ref: "mix", qty: 40 },
       ],
-    })],
-  ])
-  const menus = new Map([
-    ["m1", {
+    }),
+  ]
+  const menus = [
+    {
       id: "m1", name_ar: "m", name_en: "m", tier: "standard", meal_period: "lunch",
       price_per_cover_sar: 46,
       items: [{ id: "i1", recipe: "kabsa", portions_per_cover: 1 }],
-    }],
-  ])
-  return { ingredients, recipes, menus, policy: POLICY, ...overrides }
+    },
+  ]
+  return build(items, variants, recipes, menus)
 }
 
 const near = (a, b, tol = 1e-9) => Math.abs(a - b) < tol
@@ -91,26 +136,83 @@ const near = (a, b, tol = 1e-9) => Math.abs(a - b) < tol
 /* ── yield: as-purchased vs edible portion ──────────────────────── */
 
 test("pack price divides down to a unit price", () => {
-  assert.ok(near(apUnitCost(ing({ id: "x", pack_size: 10, ap_cost_sar: 185 })), 18.5))
+  assert.ok(near(apUnitCost(variant({ id: "x", pack_size: 10, ap_cost_sar: 185 })), 18.5))
 })
 
 test("EP cost is AP cost divided by the yield", () => {
-  const chicken = ing({ id: "x", pack_size: 10, ap_cost_sar: 185, yield_pct: 72 })
-  assert.ok(near(epUnitCost(chicken), 18.5 / 0.72))
+  assert.ok(
+    near(epUnitCost(variant({ id: "x", pack_size: 10, ap_cost_sar: 185, yield_pct: 72 })), 18.5 / 0.72),
+  )
 })
 
-test("an unpriced ingredient costs null, not zero", () => {
-  assert.equal(apUnitCost(ing({ id: "x", ap_cost_sar: null })), null)
-  assert.equal(epUnitCost(ing({ id: "x", ap_cost_sar: null })), null)
+test("an unpriced variant costs null, not zero", () => {
+  assert.equal(apUnitCost(variant({ id: "x", ap_cost_sar: null })), null)
+  assert.equal(epUnitCost(variant({ id: "x", ap_cost_sar: null })), null)
 })
 
 test("buying back the trim: 100 kg on the plate at 68% needs ~147 kg bought", () => {
   assert.ok(near(apQtyFor({ yield_pct: 68 }, 100), 100 / 0.68))
 })
 
+/* ── the costing basis ──────────────────────────────────────────── */
+
+test("an item is priced through its preferred variant", () => {
+  const cat = fixture()
+  assert.equal(costingVariant("chicken", cat).id, "chicken_fresh")
+  assert.ok(near(itemUnitCost("chicken", cat), 18.5 / 0.72))
+})
+
+test("changing the preferred variant changes the item cost", () => {
+  const cat = fixture()
+  const before = itemUnitCost("chicken", cat)
+  cat.items.get("chicken").preferred_variant = "chicken_frozen"
+  const after = itemUnitCost("chicken", cat)
+  assert.ok(near(after, 210 / 12 / 0.74))
+  assert.ok(after < before, "the frozen variant is cheaper per usable kilo")
+})
+
+test("two variants of one item cost differently because yield is per variant", () => {
+  const cat = fixture()
+  assert.ok(
+    !near(epUnitCost(cat.variants.get("chicken_fresh")), epUnitCost(cat.variants.get("chicken_frozen"))),
+  )
+})
+
+test("no preferred variant means no cost, and it is not a zero price", () => {
+  const cat = fixture()
+  cat.items.get("chicken").preferred_variant = null
+  assert.equal(itemUnitCost("chicken", cat), null)
+  const cost = recipeCost("kabsa", cat)
+  assert.deepEqual(cost.gaps.itemsWithoutPreferred, ["chicken"])
+  assert.deepEqual(cost.gaps.unpricedItems, [], "a missing basis is not an unpriced one")
+  assert.ok(Number.isFinite(cost.perBatch))
+})
+
+test("a dangling preferred variant resolves to null rather than a sibling", () => {
+  const cat = fixture()
+  cat.items.get("chicken").preferred_variant = "gone"
+  assert.equal(costingVariant("chicken", cat), null)
+})
+
+test("cheapest ignores unpriced variants — free is missing data, not a bargain", () => {
+  const cat = fixture()
+  cat.variants.get("chicken_frozen").ap_cost_sar = null
+  assert.equal(cheapestVariant("chicken", cat).id, "chicken_fresh")
+})
+
+test("preferredPremium measures how much dearer the basis is", () => {
+  const cat = fixture()
+  // fresh 25.694 vs frozen 23.649 → ~8.6% premium
+  const premium = preferredPremium("chicken", cat)
+  assert.ok(premium > 0.08 && premium < 0.09, `got ${premium}`)
+  // Null once the cheapest IS the basis.
+  cat.items.get("chicken").preferred_variant = "chicken_frozen"
+  assert.equal(preferredPremium("chicken", cat), null)
+})
+
 /* ── explosion through sub-recipes ──────────────────────────────── */
 
-test("a sub-recipe's raw ingredients reach the requirement", () => {
+test("a sub-recipe's raw items reach the requirement", () => {
   // 40 portions of a 200-portion mix = 0.2 batches × 0.9 kg = 0.18 kg
   const ex = explodeRecipe("kabsa", 40, fixture())
   assert.ok(near(ex.requirements.get("spice"), 0.18, 1e-12))
@@ -132,13 +234,12 @@ test("a reference cycle is cut and reported, not thrown", () => {
   const cat = fixture()
   cat.recipes.set("a", recipe({ id: "a", yield_portions: 10, lines: [{ id: "x", kind: "recipe", ref: "b", qty: 10 }] }))
   cat.recipes.set("b", recipe({ id: "b", yield_portions: 10, lines: [{ id: "y", kind: "recipe", ref: "a", qty: 10 }] }))
-  const cost = recipeCost("a", cat)
-  assert.ok(cost.gaps.cycles.includes("a"))
+  assert.ok(recipeCost("a", cat).gaps.cycles.includes("a"))
 })
 
-test("a dangling reference is reported rather than silently skipped", () => {
+test("a dangling item reference is reported rather than silently skipped", () => {
   const cat = fixture()
-  cat.recipes.get("kabsa").lines.push({ id: "z", kind: "ingredient", ref: "ghost", qty: 1 })
+  cat.recipes.get("kabsa").lines.push({ id: "z", kind: "item", ref: "ghost", qty: 1 })
   assert.ok(recipeCost("kabsa", cat).gaps.missingRefs.includes("ghost"))
 })
 
@@ -170,22 +271,21 @@ test("price for target inverts the food cost percentage", () => {
   assert.ok(near(priceForTarget(9.26, 30), 9.26 / 0.3))
 })
 
-test("an unpriced ingredient makes the cost incomplete, not wrong", () => {
+test("an unpriced basis makes the cost incomplete, not wrong", () => {
   const cat = fixture()
-  cat.ingredients.set("rice", ing({ id: "rice", pack_size: 20, ap_cost_sar: null }))
+  cat.variants.get("rice_20").ap_cost_sar = null
   const cost = menuCost("m1", cat)
-  assert.deepEqual(cost.gaps.unpricedIngredients, ["rice"])
+  assert.deepEqual(cost.gaps.unpricedItems, ["rice"])
   // The rice contributes nothing rather than poisoning the total with NaN.
   assert.ok(Number.isFinite(cost.perCover))
 })
 
 test("menuVerdict reads a price against the target", () => {
-  const cheap = fixture()
-  assert.equal(menuVerdict(menuCost("m1", cheap), POLICY), "under_target")
+  assert.equal(menuVerdict(menuCost("m1", fixture()), POLICY), "under_target")
 
-  const priced = fixture()
-  priced.menus.get("m1").price_per_cover_sar = null
-  assert.equal(menuVerdict(menuCost("m1", priced), POLICY), "unpriced")
+  const unpriced = fixture()
+  unpriced.menus.get("m1").price_per_cover_sar = null
+  assert.equal(menuVerdict(menuCost("m1", unpriced), POLICY), "unpriced")
 
   const loss = fixture()
   loss.menus.get("m1").price_per_cover_sar = 1
@@ -194,26 +294,51 @@ test("menuVerdict reads a price against the target", () => {
 
 /* ── inventory ──────────────────────────────────────────────────── */
 
-test("only ingredients under par are reordered, in whole packs", () => {
+test("stock on hand sums every way of buying the item", () => {
   const cat = fixture()
-  cat.ingredients.set("rice", ing({ id: "rice", pack_size: 20, ap_cost_sar: 96, on_hand: 5, par_level: 50 }))
-  cat.ingredients.set("spice", ing({ id: "spice", pack_size: 1, ap_cost_sar: 45, on_hand: 10, par_level: 10 }))
+  cat.variants.get("chicken_fresh").on_hand = 30
+  cat.variants.get("chicken_frozen").on_hand = 12
+  assert.equal(itemOnHand("chicken", cat), 42)
+})
+
+test("reorder measures against summed stock and buys packs of the preferred variant", () => {
+  const cat = fixture()
+  cat.items.get("rice").par_level = 50
+  cat.variants.get("rice_20").on_hand = 5
+  cat.items.get("chicken").par_level = 10
+  // Split across variants, together over par — so chicken is not short.
+  cat.variants.get("chicken_fresh").on_hand = 6
+  cat.variants.get("chicken_frozen").on_hand = 6
+
   const lines = reorderList(cat, new Map([["sup", { lead_time_days: 3 }]]), "2026-09-01")
-  const ids = lines.map((l) => l.ingredient.id)
-  assert.ok(!ids.includes("spice"), "at par is not short")
-  const rice = lines.find((l) => l.ingredient.id === "rice")
+  assert.deepEqual(
+    lines.map((l) => l.item.id),
+    ["rice"],
+    "chicken is covered across its variants",
+  )
+
+  const rice = lines[0]
+  assert.equal(rice.variant.id, "rice_20")
   assert.equal(rice.shortfall, 45)
   assert.equal(rice.packs, 3) // ceil(45 / 20)
   assert.equal(rice.cost, 3 * 96)
   assert.equal(rice.arrivesOn, "2026-09-04")
 })
 
-test("stock is valued at edible-portion prices", () => {
+test("an item with no costing basis is skipped by the reorder rather than guessed at", () => {
   const cat = fixture()
-  cat.ingredients.set("chicken", ing({ id: "chicken", pack_size: 10, ap_cost_sar: 185, yield_pct: 72, on_hand: 100 }))
-  cat.ingredients.set("rice", ing({ id: "rice", on_hand: 0, ap_cost_sar: null }))
-  cat.ingredients.set("spice", ing({ id: "spice", on_hand: 0, ap_cost_sar: null }))
-  assert.ok(near(inventoryValue(cat), 100 * (18.5 / 0.72)))
+  cat.items.get("rice").par_level = 50
+  cat.items.get("rice").preferred_variant = null
+  assert.deepEqual(reorderList(cat, new Map(), "2026-09-01").map((l) => l.item.id), [])
+})
+
+test("stock is valued per variant at its own price and yield, never blended", () => {
+  const cat = fixture()
+  cat.variants.get("chicken_fresh").on_hand = 100
+  cat.variants.get("chicken_frozen").on_hand = 100
+  cat.variants.get("rice_20").ap_cost_sar = null
+  cat.variants.get("spice_1").ap_cost_sar = null
+  assert.ok(near(inventoryValue(cat), 100 * (18.5 / 0.72) + 100 * (210 / 12 / 0.74)))
 })
 
 test("shiftDate walks dates in both directions across a month edge", () => {
@@ -231,59 +356,77 @@ const SUPPLIER = {
 }
 const NOW = new Date("2026-08-15T00:00:00Z")
 
+const check = (cat, suppliers = [SUPPLIER]) =>
+  validateCatalogue({ catalog: cat, suppliers, now: NOW })
+
 test("a clean catalogue reports nothing blocking", () => {
   const cat = fixture()
+  // The fixture's default basis is the dearer chicken variant; make it the
+  // cheap one so the premium warning does not fire either.
+  cat.items.get("chicken").preferred_variant = "chicken_frozen"
   cat.menus.get("m1").price_per_cover_sar = 30
-  const issues = validateCatalogue({ catalog: cat, suppliers: [SUPPLIER], now: NOW })
-  assert.deepEqual(issues.filter((i) => i.level === "error"), [])
+  assert.deepEqual(
+    check(cat).filter((i) => i.level === "error"),
+    [],
+  )
 })
 
-test("a lapsed halal certificate blocks", () => {
+test("an item with no variants blocks", () => {
+  const cat = fixture()
+  cat.variantsByItem.delete("rice")
+  cat.variants.delete("rice_20")
+  const hit = check(cat).find((i) => i.code === "item.no_variants")
+  assert.equal(hit.level, "error")
+  assert.equal(hit.entityId, "rice")
+})
+
+test("an item with variants but no costing basis blocks", () => {
+  const cat = fixture()
+  cat.items.get("rice").preferred_variant = null
+  assert.equal(check(cat).find((i) => i.code === "item.no_preferred").level, "error")
+})
+
+test("an unpriced basis warns but does not block", () => {
+  const cat = fixture()
+  cat.variants.get("rice_20").ap_cost_sar = null
+  assert.equal(check(cat).find((i) => i.code === "item.preferred_unpriced").level, "warning")
+})
+
+test("a cheaper variant on file is surfaced, not applied", () => {
+  const cat = fixture() // basis is fresh chicken, ~8.6% over the frozen one
+  const hit = check(cat).find((i) => i.code === "item.cheaper_variant_available")
+  assert.equal(hit.level, "warning")
+  assert.equal(hit.entityId, "chicken")
+  // Still priced through the basis — reporting must not change the number.
+  assert.ok(near(itemUnitCost("chicken", cat), 18.5 / 0.72))
+})
+
+test("a lapsed certificate blocks, on every variant that carries it", () => {
   const cat = fixture()
   const expired = { ...SUPPLIER, halal_cert_expiry: "2026-08-01" }
-  const issues = validateCatalogue({ catalog: cat, suppliers: [expired], now: NOW })
-  const hit = issues.find((i) => i.code === "ingredient.halal_cert_expired")
-  assert.ok(hit)
-  assert.equal(hit.level, "error")
-  assert.equal(hit.entityId, "chicken")
+  const hits = check(cat, [expired]).filter((i) => i.code === "variant.halal_cert_expired")
+  // Both chicken variants point at this supplier; an uncertified pack is stock
+  // you may hold, whichever one prices the recipes.
+  assert.equal(hits.length, 2)
+  assert.ok(hits.every((h) => h.level === "error"))
 })
 
 test("halal certification is only checked on halal-critical items", () => {
   const cat = fixture()
-  cat.ingredients.get("chicken").halal_critical = false
+  cat.items.get("chicken").halal_critical = false
   const expired = { ...SUPPLIER, halal_cert_expiry: "2026-08-01" }
-  const issues = validateCatalogue({ catalog: cat, suppliers: [expired], now: NOW })
-  assert.ok(!codes(issues).includes("ingredient.halal_cert_expired"))
+  assert.ok(!codes(check(cat, [expired])).includes("variant.halal_cert_expired"))
 })
 
-test("an unpriced ingredient warns but does not block", () => {
+test("stock under par warns, measured across variants", () => {
   const cat = fixture()
-  cat.ingredients.get("rice").ap_cost_sar = null
-  const issues = validateCatalogue({ catalog: cat, suppliers: [SUPPLIER], now: NOW })
-  const hit = issues.find((i) => i.code === "ingredient.no_cost")
-  assert.equal(hit.level, "warning")
+  cat.items.get("rice").par_level = 50
+  assert.ok(codes(check(cat)).includes("item.below_par"))
 })
 
-test("a menu selling under its own cost blocks", () => {
+test("a 100% yield on meat or produce is questioned, per variant", () => {
   const cat = fixture()
-  cat.menus.get("m1").price_per_cover_sar = 1
-  const issues = validateCatalogue({ catalog: cat, suppliers: [SUPPLIER], now: NOW })
-  const hit = issues.find((i) => i.code === "menu.loss")
-  assert.equal(hit.level, "error")
-})
-
-test("stock under par warns", () => {
-  const cat = fixture()
-  cat.ingredients.get("rice").par_level = 50
-  const issues = validateCatalogue({ catalog: cat, suppliers: [SUPPLIER], now: NOW })
-  assert.ok(codes(issues).includes("ingredient.below_par"))
-})
-
-test("a 100% yield on meat or produce is questioned", () => {
-  const cat = fixture()
-  cat.ingredients.get("chicken").yield_pct = 100
-  const issues = validateCatalogue({ catalog: cat, suppliers: [SUPPLIER], now: NOW })
-  assert.ok(codes(issues).includes("ingredient.suspicious_yield"))
-  // ...but not on dry goods, where 100 is normal.
-  assert.equal(codes(issues).filter((c) => c === "ingredient.suspicious_yield").length, 1)
+  cat.variants.get("chicken_fresh").yield_pct = 100
+  const hits = codes(check(cat)).filter((c) => c === "variant.suspicious_yield")
+  assert.equal(hits.length, 1, "the frozen variant at 74% is not questioned")
 })

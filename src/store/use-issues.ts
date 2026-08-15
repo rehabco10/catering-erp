@@ -20,14 +20,14 @@ import type { Issue } from "@/engine/validation"
  */
 export function useIssues(): Issue[] {
   const snap = useSnapshot(state)
-  const { ingredients, recipes, menus, suppliers, policy } = snap
+  const { items, variants, recipes, menus, suppliers, policy } = snap
   // Messages are rendered in the interface language (the validation bridge),
   // so a language switch must recompute them even though no data changed.
   const locale = useLocale()
   return useMemo(
     () => issuesFor(state),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ingredients, recipes, menus, suppliers, policy, locale],
+    [items, variants, recipes, menus, suppliers, policy, locale],
   )
 }
 
@@ -45,10 +45,10 @@ export function useErrorCount(): number {
  */
 export function useCatalog(): Catalog {
   const snap = useSnapshot(state)
-  const { ingredients, recipes, menus, policy } = snap
+  const { items, variants, recipes, menus, policy } = snap
   return useMemo(
     () => catalogFrom(state),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ingredients, recipes, menus, policy],
+    [items, variants, recipes, menus, policy],
   )
 }

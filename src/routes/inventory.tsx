@@ -2,11 +2,10 @@ import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
 import { useSnapshot } from "valtio"
-import { PackagePlus, Plus, ShieldAlert } from "lucide-react"
+import { Check, PackagePlus, Plus, ShieldAlert, Trash2 } from "lucide-react"
 
 import { MasterDetail } from "@/components/MasterDetail"
-import { AddIngredientWizard } from "@/features/inventory/AddIngredientWizard"
-import { Card, Note, PageHeader, Stat } from "@/components/PageShell"
+import { Card, Disclosure, Note, PageHeader, Stat } from "@/components/PageShell"
 import { Button } from "@/components/ui/button"
 import { Field, NumInput } from "@/components/ui/field"
 import { FilterChips } from "@/components/ui/filter-chips"
@@ -20,27 +19,45 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { AddItemWizard } from "@/features/inventory/AddItemWizard"
 import { useLocale, useLocalePath } from "@/i18n/LocaleProvider"
-import { apUnitCost, epUnitCost, recipeCost } from "@/engine/costing"
+import {
+  apUnitCost,
+  cheapestVariant,
+  costingVariant,
+  epUnitCost,
+  itemUnitCost,
+  recipeCost,
+} from "@/engine/costing"
+import { inventoryValue, itemOnHand, preferredPremium, reorderList } from "@/engine/inventory"
 import { dec2, int, money, money0, pickName } from "@/lib/display"
-import { inventoryValue, reorderList } from "@/engine/inventory"
 import type { IngredientCategoryValue } from "@/engine/schemas"
 import { cn } from "@/lib/utils"
-import { receiveStock, state, supplierById, supplierMap } from "@/store/ops"
+import {
+  receiveStock,
+  removeVariant,
+  setPreferredVariant,
+  state,
+  supplierById,
+  supplierMap,
+} from "@/store/ops"
 import { day } from "@/store/seed"
 import { useCatalog } from "@/store/use-issues"
 
 /**
- * Stock, and the money sitting in it.
+ * Items, and the ways of buying them.
  *
- * This is the first of the three parts and the foundation of the other two:
- * an ingredient's pack price and yield are what every recipe and every menu
- * downstream is costed from, so this page is where a wrong number does the
- * most damage. It leads with the two figures that are easiest to get wrong and
- * hardest to notice — the yield, and the gap between pack price and unit cost.
+ * The split this page exists to express: an **item** is what a recipe asks for
+ * ("6 kg basmati rice"); a **variant** is what you buy ("Al-Moun 20 kg sack,
+ * 96 SAR, 100% yield"). Supplier, pack, price, yield and stock all live on the
+ * variant, because those are exactly the things that differ between two ways of
+ * buying the same thing — and one of them, yield, changes the cost per usable
+ * kilo on its own.
  *
- * Selection lives in the URL (`/inventory/:ingredientId`), so a finding on the
- * checks page can link straight at the row that caused it.
+ * One variant is the **costing basis**. Every recipe downstream is priced
+ * through it, so the page shows the cheapest alternative beside it rather than
+ * quietly switching: a menu price quoted to a client should not move because a
+ * supplier listed a cheap SKU.
  */
 export function InventoryPage() {
   const snap = useSnapshot(state)
@@ -49,29 +66,24 @@ export function InventoryPage() {
   const catalog = useCatalog()
   const navigate = useNavigate()
   const localePath = useLocalePath()
-  const { ingredientId } = useParams()
+  const { itemId } = useParams()
   const [category, setCategory] = useState<IngredientCategoryValue | null>(null)
   const [adding, setAdding] = useState(false)
 
   const today = day(0)
-  const reorder = useMemo(
-    () => reorderList(catalog, supplierMap(state), today),
-    [catalog, today],
-  )
+  const reorder = useMemo(() => reorderList(catalog, supplierMap(state), today), [catalog, today])
   const stockValue = useMemo(() => inventoryValue(catalog), [catalog])
 
-  const counts = snap.ingredients.reduce<Record<string, number>>((acc, i) => {
+  const counts = snap.items.reduce<Record<string, number>>((acc, i) => {
     acc[i.category] = (acc[i.category] ?? 0) + 1
     return acc
   }, {})
-  const shown = category
-    ? snap.ingredients.filter((i) => i.category === category)
-    : snap.ingredients
-  const selected = ingredientId ? snap.ingredients.find((i) => i.id === ingredientId) : undefined
+  const shown = category ? snap.items.filter((i) => i.category === category) : snap.items
+  const selected = itemId ? snap.items.find((i) => i.id === itemId) : undefined
+
   // An explicit `/inventory` segment rather than ids at the root: a bare
-  // `/:id` route would happily swallow `/menus` as an ingredient id.
-  const go = (id: string | null) =>
-    navigate(localePath(id ? `/inventory/${id}` : "/inventory"))
+  // `/:id` route would happily swallow `/menus` as an item id.
+  const go = (id: string | null) => navigate(localePath(id ? `/inventory/${id}` : "/inventory"))
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-page">
@@ -80,12 +92,10 @@ export function InventoryPage() {
         description={t("page.inventory_desc")}
         actions={
           <>
-            <span className="text-[12px] font-semibold tabular-nums">
-              {money0(stockValue)}
-            </span>
+            <span className="text-[12px] font-semibold tabular-nums">{money0(stockValue)}</span>
             <Button size="sm" onClick={() => setAdding(true)}>
               <Plus className="size-3.5" />
-              {t("action.add_ingredient")}
+              {t("action.add_item")}
             </Button>
           </>
         }
@@ -107,20 +117,24 @@ export function InventoryPage() {
                   count: counts[c],
                 }))}
               />
-              {shown.map((ing) => {
-                const sup = supplierById(ing.supplier, state)
+              {shown.map((item) => {
+                const variants = catalog.variantsByItem.get(item.id) ?? []
+                const basis = costingVariant(item.id, catalog)
+                const sup = supplierById(basis?.supplier ?? null, state)
                 const certLapsed =
-                  ing.halal_critical &&
-                  (!sup?.halal_cert_no || (sup.halal_cert_expiry ?? "") < today)
-                const active = ing.id === ingredientId
+                  item.halal_critical &&
+                  variants.some((v) => {
+                    const s = supplierById(v.supplier, state)
+                    return !s?.halal_cert_no || (s.halal_cert_expiry ?? "") < today
+                  })
                 return (
                   <button
-                    key={ing.id}
+                    key={item.id}
                     type="button"
-                    onClick={() => go(ing.id)}
+                    onClick={() => go(item.id)}
                     className={cn(
                       "block w-full rounded-xl border bg-surface-raised p-3 text-start shadow-[var(--elev-1)] transition-colors",
-                      active
+                      item.id === itemId
                         ? "border-[color:var(--brand-navy)] ring-1 ring-[color:var(--brand-navy)]"
                         : "border-surface-line hover:bg-surface-sunken",
                     )}
@@ -134,33 +148,33 @@ export function InventoryPage() {
                           />
                         )}
                         <span className="truncate text-[13px] font-bold">
-                          {pickName(ing, locale)}
+                          {pickName(item, locale)}
                         </span>
                       </span>
                       <span className="shrink-0 text-[10px] text-muted-foreground">
-                        {t(`cat.${ing.category}`)}
+                        {t(`cat.${item.category}`)}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
-                      {t(`storage.${ing.storage}`)} · {dec2(ing.pack_size)} {ing.base_unit} /{" "}
-                      {t(`pack.${ing.pack_unit}`)}
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {/* The basis, not the item, is what carries a supplier. */}
+                      {basis ? pickName(basis, locale) : t("field.no_basis")}
+                      {sup ? ` · ${pickName(sup, locale)}` : ""}
+                      {variants.length > 1 ? ` · +${int(variants.length - 1)}` : ""}
                     </p>
-                    {/* Bound as a floor: the par level is the goal, and falling
-                        under it is what the colour has to say. */}
                     <div className="mt-2">
-                      <Meter value={ing.on_hand} max={ing.par_level} bound="min" />
+                      {/* Bound as a floor: the par level is the goal, and
+                          falling under it is what the colour has to say. */}
+                      <Meter value={itemOnHand(item.id, catalog)} max={item.par_level} bound="min" />
                     </div>
                   </button>
                 )
               })}
             </>
           }
-          detail={selected ? <IngredientDetail ingredientId={selected.id} /> : null}
+          detail={selected ? <ItemDetail itemId={selected.id} /> : null}
         />
       </div>
 
-      {/* The reorder sheet sits under the split view rather than inside it: it
-          is about the whole store, not the selected row. */}
       {reorder.length > 0 && (
         <div className="shrink-0 border-t border-surface-line bg-surface-raised">
           <details className="px-4 py-2">
@@ -171,13 +185,13 @@ export function InventoryPage() {
               </span>
             </summary>
             <div className="pb-2">
-              <Table className="min-w-[34rem]">
+              <Table className="min-w-[38rem]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("nav.inventory")}</TableHead>
+                    <TableHead>{t("group.items")}</TableHead>
+                    <TableHead>{t("field.preferred")}</TableHead>
                     <TableHead className="text-end">{t("field.shortfall")}</TableHead>
                     <TableHead className="text-end">{t("field.pack")}</TableHead>
-                    <TableHead>{t("field.supplier")}</TableHead>
                     <TableHead>{t("field.arrives_on")}</TableHead>
                     <TableHead className="text-end">{t("field.cost")}</TableHead>
                     <TableHead />
@@ -185,20 +199,18 @@ export function InventoryPage() {
                 </TableHeader>
                 <TableBody>
                   {reorder.map((line) => (
-                    <TableRow key={line.ingredient.id}>
+                    <TableRow key={line.item.id}>
                       <TableCell className="px-2.5 text-[12px] font-medium">
-                        {pickName(line.ingredient, locale)}
+                        {pickName(line.item, locale)}
+                      </TableCell>
+                      <TableCell className="px-2.5 text-[11px] text-muted-foreground">
+                        {pickName(line.variant, locale)}
                       </TableCell>
                       <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
-                        {dec2(line.shortfall)} {line.ingredient.base_unit}
+                        {dec2(line.shortfall)} {t(`unit.${line.item.base_unit}`)}
                       </TableCell>
                       <TableCell className="px-2.5 text-end text-[12px] font-bold tabular-nums">
                         {int(line.packs)}
-                      </TableCell>
-                      <TableCell className="px-2.5 text-[11px] text-muted-foreground">
-                        {supplierById(line.supplierId, state)
-                          ? pickName(supplierById(line.supplierId, state)!, locale)
-                          : "—"}
                       </TableCell>
                       <TableCell className="px-2.5 text-[11px] text-muted-foreground tabular-nums">
                         {line.arrivesOn ?? "—"}
@@ -210,7 +222,7 @@ export function InventoryPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => receiveStock(line.ingredient.id, line.packs)}
+                          onClick={() => receiveStock(line.variant.id, line.packs)}
                         >
                           <PackagePlus className="size-3.5" />
                           {t("action.receive")}
@@ -236,169 +248,259 @@ export function InventoryPage() {
         </div>
       )}
 
-      <AddIngredientWizard open={adding} onOpenChange={setAdding} onAdded={go} />
+      <AddItemWizard open={adding} onOpenChange={setAdding} onAdded={go} />
     </div>
   )
 }
 
 /* ── detail ─────────────────────────────────────────────────────── */
 
-function IngredientDetail({ ingredientId }: { ingredientId: string }) {
+function ItemDetail({ itemId }: { itemId: string }) {
   const snap = useSnapshot(state)
   const { t } = useTranslation()
   const locale = useLocale()
   const catalog = useCatalog()
-  const ing = snap.ingredients.find((i) => i.id === ingredientId)
-  const [packs, setPacks] = useState("")
+  const [receiving, setReceiving] = useState<Record<string, string>>({})
 
-  if (!ing) return null
-  const sup = supplierById(ing.supplier, state)
-  const ap = apUnitCost(ing)
-  const ep = epUnitCost(ing)
-  // The recipes that would be re-costed by editing this row — the blast radius
-  // of a wrong price, shown before the price is edited rather than after.
+  const item = snap.items.find((i) => i.id === itemId)
+  if (!item) return null
+
+  const variants = snap.variants.filter((v) => v.item === itemId)
+  const basis = costingVariant(itemId, catalog)
+  const cheapest = cheapestVariant(itemId, catalog)
+  const premium = preferredPremium(itemId, catalog)
+  const unitCost = itemUnitCost(itemId, catalog)
+  const onHand = itemOnHand(itemId, catalog)
+  const today = day(0)
+
+  // The recipes that would be re-costed by changing the basis — the blast
+  // radius, shown before the change rather than after.
   const usedBy = snap.recipes.filter((r) =>
-    r.lines.some((l) => l.kind === "ingredient" && l.ref === ingredientId),
+    r.lines.some((l) => l.kind === "item" && l.ref === itemId),
   )
 
-  const edit = () => state.ingredients.find((i) => i.id === ingredientId)!
+  const edit = () => state.items.find((i) => i.id === itemId)!
 
   return (
     <>
       <Card
-        title={pickName(ing, locale)}
-        description={`${t(`cat.${ing.category}`)} · ${t(`storage.${ing.storage}`)}`}
+        title={pickName(item, locale)}
+        description={`${t(`cat.${item.category}`)} · ${t(`unit.${item.base_unit}`)}`}
       >
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <Stat value={dec2(ing.on_hand)} label={t("field.on_hand")} />
+          <Stat value={dec2(onHand)} label={t("field.on_hand")} />
           <Stat
-            value={dec2(ing.par_level)}
+            value={dec2(item.par_level)}
             label={t("field.par")}
-            tone={ing.on_hand < ing.par_level ? "warn" : "good"}
+            tone={onHand < item.par_level ? "warn" : "good"}
           />
-          <Stat value={`${dec2(ing.yield_pct)}%`} label={t("field.yield")} />
+          <Stat value={int(variants.length)} label={t("section.variants")} />
           <Stat value={int(usedBy.length)} label={t("nav.recipes")} />
         </div>
-      </Card>
 
-      <Card title={t("field.ep_cost")}>
-        <div className="grid gap-3 lg:grid-cols-3">
-          <Field label={t("field.ap_cost")} hint={`${dec2(ing.pack_size)} ${ing.base_unit}`}>
+        <div className="mt-3">
+          <Field label={t("field.par")} hint={t("field.par_hint")}>
             <NumInput
-              value={ing.ap_cost_sar ?? ""}
-              onChange={(e) => {
-                edit().ap_cost_sar = e.target.value === "" ? null : Number(e.target.value)
-              }}
-            />
-          </Field>
-          <Field
-            label={t("field.yield")}
-            hint={t("سعر الشراء يُقسَم على نسبة الاستخلاص للحصول على تكلفة ما يصل الطبق فعلًا.")}
-          >
-            <NumInput
-              value={ing.yield_pct}
-              onChange={(e) => {
-                const v = Number(e.target.value)
-                // Clamped, because a zero yield divides by zero downstream and
-                // an over-100 yield claims the trim created food.
-                edit().yield_pct = Math.min(100, Math.max(1, v || 1))
-              }}
-            />
-          </Field>
-          <div className="rounded-lg bg-surface-sunken px-3 py-2.5">
-            <div className="text-[10px] text-muted-foreground">{t("field.ap_cost")}</div>
-            <div className="text-[13px] font-semibold tabular-nums">
-              {ap === null ? "—" : money(ap)}
-              <span className="text-[10px] font-normal text-muted-foreground">
-                {" "}
-                / {ing.base_unit}
-              </span>
-            </div>
-            <div className="mt-1.5 text-[10px] text-muted-foreground">{t("field.ep_cost")}</div>
-            <div className="text-[15px] font-bold text-[color:var(--brand-navy-deep)] tabular-nums">
-              {ep === null ? "—" : money(ep)}
-              <span className="text-[10px] font-normal text-muted-foreground">
-                {" "}
-                / {ing.base_unit}
-              </span>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <Card title={t("action.receive")}>
-        <div className="flex flex-wrap items-end gap-2">
-          <Field label={t("field.pack")} className="min-w-32 flex-1">
-            <NumInput value={packs} onChange={(e) => setPacks(e.target.value)} />
-          </Field>
-          <Field label={t("field.par")} className="min-w-32 flex-1">
-            <NumInput
-              value={ing.par_level}
+              value={item.par_level}
               onChange={(e) => {
                 edit().par_level = Math.max(0, Number(e.target.value) || 0)
               }}
             />
           </Field>
-          <Button
-            size="sm"
-            disabled={!Number(packs)}
-            onClick={() => {
-              receiveStock(ingredientId, Number(packs))
-              setPacks("")
-            }}
-          >
-            <PackagePlus className="size-3.5" />
-            {t("action.receive")}
-          </Button>
         </div>
       </Card>
 
-      <Card title={t("field.supplier")}>
-        {sup ? (
-          <>
-            <p className="text-[13px] font-semibold">{pickName(sup, locale)}</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {t("field.lead_time")}: {int(sup.lead_time_days)}
-            </p>
-            {ing.halal_critical && (
-              <Note
-                tone={
-                  !sup.halal_cert_no || (sup.halal_cert_expiry ?? "") < day(0) ? "warn" : "brand"
-                }
-                icon={<ShieldAlert className="size-3.5" />}
-              >
-                {t("field.halal_cert")}: {sup.halal_cert_no ?? "—"}
-                {sup.halal_cert_expiry ? ` · ${sup.halal_cert_expiry}` : ""}
-              </Note>
-            )}
-          </>
-        ) : (
-          <p className="text-[12px] text-muted-foreground">—</p>
+      {/* ── the costing basis ────────────────────────────────────── */}
+      <Card title={t("field.ep_cost")}>
+        <div className="rounded-xl bg-[color:var(--brand-navy-soft)] px-4 py-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[11px] font-bold text-[color:var(--brand-navy-deep)]">
+              {t("field.preferred")}
+            </span>
+            <span className="text-2xl font-bold text-[color:var(--brand-navy-deep)] tabular-nums">
+              {unitCost === null ? "—" : money(unitCost)}
+              <span className="text-[11px] font-normal">
+                {" / "}
+                {t(`unit.${item.base_unit}`)}
+              </span>
+            </span>
+          </div>
+          <div className="mt-1 text-[11px] text-[color:var(--brand-navy-deep)]/70">
+            {basis ? pickName(basis, locale) : t("field.no_basis")}
+          </div>
+        </div>
+
+        {premium !== null && cheapest && (
+          <Note tone="warn">
+            {t("field.cheapest")}: {pickName(cheapest, locale)} — {money(epUnitCost(cheapest) ?? 0)}{" "}
+            ({dec2(premium * 100)}%)
+          </Note>
         )}
       </Card>
 
+      {/* ── the variants ─────────────────────────────────────────── */}
+      <Card title={t("section.variants")} bodyClassName="p-0">
+        <Table className="min-w-[46rem]">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10">{t("field.preferred")}</TableHead>
+              <TableHead>{t("field.variant_name")}</TableHead>
+              <TableHead>{t("field.supplier")}</TableHead>
+              <TableHead className="text-end">{t("field.ap_cost")}</TableHead>
+              <TableHead className="text-end">{t("field.yield")}</TableHead>
+              <TableHead className="text-end">{t("field.ep_cost")}</TableHead>
+              <TableHead className="text-end">{t("field.on_hand")}</TableHead>
+              <TableHead>{t("action.receive")}</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {variants.map((variant) => {
+              const sup = supplierById(variant.supplier, state)
+              const ep = epUnitCost(variant)
+              const ap = apUnitCost(variant)
+              const isBasis = item.preferred_variant === variant.id
+              const isCheapest = cheapest?.id === variant.id
+              const certLapsed =
+                item.halal_critical && (!sup?.halal_cert_no || (sup.halal_cert_expiry ?? "") < today)
+              const live = () => state.variants.find((v) => v.id === variant.id)!
+              return (
+                <TableRow
+                  key={variant.id}
+                  className={cn(isBasis && "bg-[color:var(--brand-navy-soft)]/40")}
+                >
+                  <TableCell className="px-2.5">
+                    {/* A radio, not a toggle: exactly one basis, always. */}
+                    <input
+                      type="radio"
+                      name={`basis-${itemId}`}
+                      checked={isBasis}
+                      onChange={() => setPreferredVariant(itemId, variant.id)}
+                      aria-label={`${t("field.preferred")} — ${pickName(variant, locale)}`}
+                      className="size-4 accent-[color:var(--brand-navy)]"
+                    />
+                  </TableCell>
+                  <TableCell className="px-2.5 text-[12px] font-medium">
+                    <span className="flex items-center gap-1.5">
+                      {certLapsed && (
+                        <ShieldAlert
+                          className="size-3.5 shrink-0 text-[color:var(--brand-ruby)]"
+                          aria-label={t("field.halal_cert")}
+                        />
+                      )}
+                      {pickName(variant, locale)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {dec2(variant.pack_size)} {t(`unit.${item.base_unit}`)} ·{" "}
+                      {t(`storage.${variant.storage}`)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-2.5 text-[11px] text-muted-foreground">
+                    {sup ? pickName(sup, locale) : "—"}
+                  </TableCell>
+                  <TableCell className="text-end">
+                    <NumInput
+                      aria-label={`${t("field.ap_cost")} — ${pickName(variant, locale)}`}
+                      value={variant.ap_cost_sar ?? ""}
+                      onChange={(e) => {
+                        live().ap_cost_sar = e.target.value === "" ? null : Number(e.target.value)
+                      }}
+                      className="h-7 w-24 text-end"
+                    />
+                  </TableCell>
+                  <TableCell className="text-end">
+                    <NumInput
+                      aria-label={`${t("field.yield")} — ${pickName(variant, locale)}`}
+                      value={variant.yield_pct}
+                      onChange={(e) => {
+                        // Clamped: a zero yield divides by zero downstream, and
+                        // over 100 claims the trim created food.
+                        live().yield_pct = Math.min(100, Math.max(1, Number(e.target.value) || 1))
+                      }}
+                      className="h-7 w-16 text-end"
+                    />
+                  </TableCell>
+                  <TableCell className="px-2.5 text-end text-[12px] font-semibold tabular-nums">
+                    <span className="flex items-center justify-end gap-1">
+                      {isCheapest && variants.length > 1 && (
+                        <Check
+                          className="size-3 text-[color:var(--brand-green)]"
+                          aria-label={t("field.cheapest")}
+                        />
+                      )}
+                      {ep === null ? "—" : money(ep)}
+                    </span>
+                    <span className="text-[10px] font-normal text-muted-foreground">
+                      {ap === null ? "" : `AP ${money(ap)}`}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
+                    {dec2(variant.on_hand)}
+                  </TableCell>
+                  <TableCell className="px-1.5">
+                    <div className="flex items-center gap-1">
+                      <NumInput
+                        aria-label={`${t("action.receive")} — ${pickName(variant, locale)}`}
+                        value={receiving[variant.id] ?? ""}
+                        onChange={(e) =>
+                          setReceiving((r) => ({ ...r, [variant.id]: e.target.value }))
+                        }
+                        className="h-7 w-14 text-end"
+                      />
+                      <Button
+                        size="icon-sm"
+                        variant="outline"
+                        disabled={!Number(receiving[variant.id])}
+                        aria-label={t("action.receive")}
+                        onClick={() => {
+                          receiveStock(variant.id, Number(receiving[variant.id]))
+                          setReceiving((r) => ({ ...r, [variant.id]: "" }))
+                        }}
+                      >
+                        <PackagePlus className="size-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-1.5 text-end">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`${t("action.remove")} — ${pickName(variant, locale)}`}
+                      onClick={() => removeVariant(variant.id)}
+                    >
+                      <Trash2 className="size-3.5 text-muted-foreground" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+        <p className="border-t border-surface-line px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
+          {t("سعر الشراء يُقسَم على نسبة الاستخلاص للحصول على تكلفة ما يصل الطبق فعلًا.")}
+        </p>
+      </Card>
+
       {usedBy.length > 0 && (
-        <Card title={t("nav.recipes")} bodyClassName="p-0">
+        <Disclosure title={t("section.used_by")} count={int(usedBy.length)}>
           <Table className="min-w-[24rem]">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("nav.recipes")}</TableHead>
-                <TableHead className="text-end">{t("field.portions_per_cover")}</TableHead>
-                <TableHead className="text-end">{t("field.cost")}</TableHead>
+                <TableHead className="text-end">{t("field.per_batch")}</TableHead>
+                <TableHead className="text-end">{t("field.per_portion")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {usedBy.map((r) => {
-                const line = r.lines.find(
-                  (l) => l.kind === "ingredient" && l.ref === ingredientId,
-                )!
+                const line = r.lines.find((l) => l.kind === "item" && l.ref === itemId)!
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="px-2.5 text-[12px] font-medium">
                       {pickName(r, locale)}
                     </TableCell>
                     <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
-                      {dec2(line.qty)} {ing.base_unit}
+                      {dec2(line.qty)} {t(`unit.${item.base_unit}`)}
                     </TableCell>
                     <TableCell className="px-2.5 text-end text-[12px] tabular-nums">
                       {money(recipeCost(r.id, catalog).perPortion)}
@@ -408,7 +510,7 @@ function IngredientDetail({ ingredientId }: { ingredientId: string }) {
               })}
             </TableBody>
           </Table>
-        </Card>
+        </Disclosure>
       )}
     </>
   )

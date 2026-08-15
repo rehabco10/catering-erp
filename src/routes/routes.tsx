@@ -18,7 +18,10 @@ import { useIssues } from "@/store/use-issues"
 
 /** Where each finding's entity lives, so a row can be clicked through. */
 const ROUTE_FOR: Record<string, (id: string) => string> = {
-  ingredient: (id) => `/inventory/${id}`,
+  item: (id) => `/inventory/${id}`,
+  // A variant has no page of its own — it lives on its item's, which is where
+  // the fix (repoint the basis, change the supplier) actually happens.
+  variant: () => "/inventory",
   recipe: (id) => `/recipes/${id}`,
   menu: (id) => `/menus/${id}`,
 }

@@ -6,7 +6,7 @@ import { CornerDownLeft, Search } from "lucide-react"
 import { Input } from "@/components/ui/field"
 import { ResponsivePanel } from "@/components/ui/responsive-panel"
 import { useLocale } from "@/i18n/LocaleProvider"
-import { epUnitCost, recipeCost } from "@/engine/costing"
+import { itemUnitCost, recipeCost } from "@/engine/costing"
 import { money, pickName } from "@/lib/display"
 import { addRecipeLine, state } from "@/store/ops"
 import { useCatalog } from "@/store/use-issues"
@@ -44,19 +44,21 @@ export function AddLineSheet({
   const matches = (e: { name_ar: string; name_en: string }) =>
     !q || e.name_ar.toLowerCase().includes(q) || e.name_en.toLowerCase().includes(q)
 
-  const ingredients = useMemo(
+  const items = useMemo(
     () =>
-      snap.ingredients
+      snap.items
         .filter((i) => !taken.has(i.id) && matches(i))
         .map((i) => ({
           id: i.id,
           label: pickName(i, locale),
-          meta: `${t(`cat.${i.category}`)}`,
+          meta: t(`cat.${i.category}`),
           unit: t(`unit.${i.base_unit}`),
-          cost: epUnitCost(i),
+          // Priced through the item's costing basis, so the figure here is the
+          // one the line will actually carry once added.
+          cost: itemUnitCost(i.id, catalog),
         })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [snap.ingredients, q, locale, recipe?.lines.length],
+    [snap.items, snap.variants, q, locale, catalog, recipe?.lines.length],
   )
 
   const subRecipes = useMemo(
@@ -76,7 +78,7 @@ export function AddLineSheet({
     [snap.recipes, q, locale, catalog, recipeId, recipe?.lines.length],
   )
 
-  const add = (kind: "ingredient" | "recipe", ref: string) => {
+  const add = (kind: "item" | "recipe", ref: string) => {
     // Quantity starts at 1 and is set on the card, where the running cost is
     // visible — asking for it here would mean typing a number against a total
     // you cannot see yet.
@@ -87,8 +89,8 @@ export function AddLineSheet({
 
   const group = (
     title: string,
-    rows: typeof ingredients,
-    kind: "ingredient" | "recipe",
+    rows: typeof items,
+    kind: "item" | "recipe",
   ) =>
     rows.length > 0 && (
       <section>
@@ -121,7 +123,7 @@ export function AddLineSheet({
       </section>
     )
 
-  const empty = ingredients.length === 0 && subRecipes.length === 0
+  const empty = items.length === 0 && subRecipes.length === 0
 
   return (
     <ResponsivePanel
@@ -149,7 +151,7 @@ export function AddLineSheet({
         </p>
       ) : (
         <>
-          {group(t("group.ingredients"), ingredients, "ingredient")}
+          {group(t("group.items"), items, "item")}
           {group(t("group.sub_recipes"), subRecipes, "recipe")}
         </>
       )}

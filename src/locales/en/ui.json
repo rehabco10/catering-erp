@@ -20,8 +20,8 @@
     "validation_desc": "Anything that makes an item cost or a menu price wrong, or breaches a sourcing requirement.",
     "settings": "Settings",
     "settings_desc": "Pricing policy: the food-cost target, the Q factor, and VAT.",
-    "inventory": "Stock & suppliers",
-    "inventory_desc": "Pack price and yield — the two numbers every recipe and menu downstream is costed from.",
+    "inventory": "Items & purchase options",
+    "inventory_desc": "What recipes ask for, and how it is actually bought — the costing basis is what prices it.",
     "menus_graph_desc": "The tree from menu to dish — bar width is the dish’s share of the plate cost."
   },
   "meal": {
@@ -116,7 +116,15 @@
     "halal_critical": "Halal-critical",
     "per_portion": "Per portion",
     "per_batch": "Per batch",
-    "with_vat": "Incl. {pct}% VAT: {amount}"
+    "with_vat": "Incl. {pct}% VAT: {amount}",
+    "item_name_hint": "What a recipe asks for — \"Basmati rice\", not \"20 kg sack\".",
+    "variant_name_hint": "How it is bought — \"20 kg sack\" or \"Frozen — 12 kg case\".",
+    "variant_name": "Option name",
+    "base_unit_hint": "The unit recipes are written in.",
+    "par_hint": "Par for the whole item, summed across every option.",
+    "preferred": "Costing basis",
+    "cheapest": "Cheapest",
+    "no_basis": "No costing basis"
   },
   "policy": {
     "target_food_cost_pct": "Target food cost",
@@ -127,7 +135,6 @@
   "action": {
     "add_menu": "Add menu",
     "add_recipe": "Add recipe",
-    "add_ingredient": "Add ingredient",
     "price_at_target": "Price at target",
     "receive": "Receive",
     "back": "Back",
@@ -137,27 +144,20 @@
     "search": "Search",
     "add_line": "Add to build",
     "remove": "Remove",
-    "add_dish": "Add dish"
+    "add_dish": "Add dish",
+    "add_item": "Add item",
+    "add_variant": "Add option"
   },
   "empty": {
     "menus": "Select a menu to see its costing.",
     "recipes": "Select a recipe to see its bill of materials.",
-    "inventory": "Select an ingredient to see its costing.",
+    "inventory": "Select an item to see its purchase options and cost.",
     "no_results": "No matches.",
     "build": "Nothing in the build yet.",
     "composition": "No dishes yet."
   },
   "inventory": {
     "reorder": "Below par"
-  },
-  "pack": {
-    "kg": "kg",
-    "l": "L",
-    "ea": "ea",
-    "box": "box",
-    "case": "case",
-    "sack": "sack",
-    "tray": "tray"
   },
   "unit": {
     "kg": "kg",
@@ -170,11 +170,13 @@
     "raw_requirement": "Raw requirement",
     "used_by": "Used by",
     "composition": "Composition",
-    "pricing": "Pricing"
+    "pricing": "Pricing",
+    "first_variant": "First purchase option",
+    "variants": "Purchase options"
   },
   "group": {
-    "ingredients": "Ingredients",
-    "sub_recipes": "Sub-recipes"
+    "sub_recipes": "Sub-recipes",
+    "items": "Items"
   },
   "view": {
     "label": "View",
@@ -189,5 +191,14 @@
     "fit_view": "Fit",
     "unpin_all": "Unpin",
     "pinned_hint": "Placed by hand — double-click to hand it back to the auto-layout."
+  },
+  "packunit": {
+    "kg": "kg",
+    "l": "L",
+    "ea": "ea",
+    "box": "box",
+    "case": "case",
+    "sack": "sack",
+    "tray": "tray"
   }
 }

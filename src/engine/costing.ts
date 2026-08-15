@@ -1,4 +1,4 @@
-import type { Ingredient, Menu, Policy, Recipe } from "./schemas.js"
+import type { Item, ItemVariant, Menu, Policy, Recipe } from "./schemas.js"
 
 /**
  * The costing engine: as-purchased price in, cost-per-cover out.
@@ -22,7 +22,10 @@ import type { Ingredient, Menu, Policy, Recipe } from "./schemas.js"
  */
 
 export interface Catalog {
-  ingredients: Map<string, Ingredient>
+  items: Map<string, Item>
+  variants: Map<string, ItemVariant>
+  /** Every variant of an item, indexed once so lookups are not O(n) per call. */
+  variantsByItem: Map<string, ItemVariant[]>
   recipes: Map<string, Recipe>
   menus: Map<string, Menu>
   policy: Policy
@@ -32,30 +35,42 @@ export interface Catalog {
 export interface CostingGaps {
   /** Recipe lines pointing at an id that no longer exists. */
   missingRefs: string[]
-  /** Ingredients with no purchase price — their contribution is 0, not unknown. */
-  unpricedIngredients: string[]
+  /** Items whose costing basis carries no price — contribution is 0, not unknown. */
+  unpricedItems: string[]
+  /**
+   * Items with no preferred variant. Nothing can price them, which is a
+   * different failure from "priced at zero" and has a different fix.
+   */
+  itemsWithoutPreferred: string[]
   /** Recipe ids that take part in a reference cycle; their branch is cut. */
   cycles: string[]
 }
 
-const noGaps = (): CostingGaps => ({ missingRefs: [], unpricedIngredients: [], cycles: [] })
+const GAP_KEYS = ["missingRefs", "unpricedItems", "itemsWithoutPreferred", "cycles"] as const
+
+const noGaps = (): CostingGaps => ({
+  missingRefs: [],
+  unpricedItems: [],
+  itemsWithoutPreferred: [],
+  cycles: [],
+})
 
 const mergeGaps = (into: CostingGaps, from: CostingGaps): CostingGaps => {
-  for (const k of ["missingRefs", "unpricedIngredients", "cycles"] as const) {
+  for (const k of GAP_KEYS) {
     for (const v of from[k]) if (!into[k].includes(v)) into[k].push(v)
   }
   return into
 }
 
-/* ── ingredient level ───────────────────────────────────────────── */
+/* ── variant level: price and yield ─────────────────────────────── */
 
 /**
- * The three functions below take only the fields they read, as readonly.
+ * The functions below take only the fields they read, as readonly.
  *
- * That is not fussiness: components hand them ingredients straight off a valtio
- * snapshot, which is deeply readonly, and demanding a full mutable `Ingredient`
- * would force a cast at every call site — the kind of cast that eventually
- * hides a real type error.
+ * That is not fussiness: components hand them variants straight off a valtio
+ * snapshot, which is deeply readonly, and demanding a full mutable
+ * `ItemVariant` would force a cast at every call site — the kind of cast that
+ * eventually hides a real type error.
  */
 type Priced = {
   readonly ap_cost_sar: number | null
@@ -67,10 +82,10 @@ type Priced = {
  * As-purchased cost of one base unit. `ap_cost_sar` prices a whole pack, so a
  * 20 kg sack at 96 SAR is 4.80 SAR/kg.
  */
-export function apUnitCost(ing: Priced): number | null {
-  if (ing.ap_cost_sar === null) return null
-  if (ing.pack_size <= 0) return null
-  return ing.ap_cost_sar / ing.pack_size
+export function apUnitCost(variant: Priced): number | null {
+  if (variant.ap_cost_sar === null) return null
+  if (variant.pack_size <= 0) return null
+  return variant.ap_cost_sar / variant.pack_size
 }
 
 /**
@@ -78,12 +93,14 @@ export function apUnitCost(ing: Priced): number | null {
  *
  *     EP cost = AP cost ÷ yield%
  *
- * Chicken breast at 4.50/kg yielding 85% costs 5.29/kg on the plate.
+ * Chicken breast at 4.50/kg yielding 85% costs 5.29/kg on the plate. Yield is
+ * a variant field, so two ways of buying the same item legitimately cost
+ * different amounts per usable kilo.
  */
-export function epUnitCost(ing: Priced): number | null {
-  const ap = apUnitCost(ing)
+export function epUnitCost(variant: Priced): number | null {
+  const ap = apUnitCost(variant)
   if (ap === null) return null
-  return ap / (ing.yield_pct / 100)
+  return ap / (variant.yield_pct / 100)
 }
 
 /**
@@ -91,14 +108,54 @@ export function epUnitCost(ing: Priced): number | null {
  * inverse of the yield, and the number the purchase order must carry. Ordering
  * the recipe quantity of a 60%-yield vegetable buys two-thirds of a service.
  */
-export function apQtyFor(ing: Pick<Priced, "yield_pct">, epQty: number): number {
-  return epQty / (ing.yield_pct / 100)
+export function apQtyFor(variant: Pick<Priced, "yield_pct">, epQty: number): number {
+  return epQty / (variant.yield_pct / 100)
+}
+
+/* ── item level: the costing basis ──────────────────────────────── */
+
+/**
+ * The variant an item is priced through, or null if it has none.
+ *
+ * A dangling `preferred_variant` resolves to null rather than falling back to
+ * some other variant: the fallback would be a silent decision about money.
+ */
+export function costingVariant(itemId: string, catalog: Catalog): ItemVariant | null {
+  const item = catalog.items.get(itemId)
+  if (!item?.preferred_variant) return null
+  return catalog.variants.get(item.preferred_variant) ?? null
+}
+
+/** Edible-portion cost of one base unit of an item, through its preferred variant. */
+export function itemUnitCost(itemId: string, catalog: Catalog): number | null {
+  const variant = costingVariant(itemId, catalog)
+  return variant ? epUnitCost(variant) : null
+}
+
+/**
+ * The variant that would cost least per usable base unit.
+ *
+ * Reported, never applied — see `Item.preferred_variant`. Unpriced variants are
+ * not candidates: "free" is missing data, not a bargain.
+ */
+export function cheapestVariant(itemId: string, catalog: Catalog): ItemVariant | null {
+  let best: ItemVariant | null = null
+  let bestCost = Infinity
+  for (const variant of catalog.variantsByItem.get(itemId) ?? []) {
+    const cost = epUnitCost(variant)
+    if (cost === null) continue
+    if (cost < bestCost) {
+      best = variant
+      bestCost = cost
+    }
+  }
+  return best
 }
 
 /* ── recipe explosion ───────────────────────────────────────────── */
 
 export interface Explosion {
-  /** ingredient id → edible-portion quantity in that ingredient's base unit. */
+  /** item id → edible-portion quantity in that item's base unit. */
   requirements: Map<string, number>
   /** recipe id → batches required, including sub-recipes. */
   batches: Map<string, number>
@@ -119,8 +176,7 @@ function add(map: Map<string, number>, key: string, qty: number) {
 }
 
 /**
- * Walk a recipe tree, accumulating raw-ingredient requirements for `portions`
- * of it.
+ * Walk a recipe tree, accumulating raw-item requirements for `portions` of it.
  *
  * `portions`, not batches, is the entry point on purpose: the caller knows how
  * many people are eating, and fractional batches are normal — you do not cook
@@ -157,8 +213,8 @@ export function explodeRecipe(
   for (const line of recipe.lines) {
     const qty = line.qty * batches
     if (qty <= 0) continue
-    if (line.kind === "ingredient") {
-      if (!catalog.ingredients.has(line.ref)) {
+    if (line.kind === "item") {
+      if (!catalog.items.has(line.ref)) {
         out.gaps.missingRefs.push(line.ref)
         continue
       }
@@ -187,8 +243,10 @@ export interface RecipeCost {
 /**
  * Cost one batch of a recipe, including everything its sub-recipes pull in.
  *
- * Unpriced ingredients contribute nothing and are named in `gaps` — a zero
- * that announces itself, rather than a total that quietly reads as cheap.
+ * An item that cannot be priced — no preferred variant, or a preferred variant
+ * with no price — contributes nothing and is named in `gaps`. The two cases are
+ * reported separately because they have different fixes: pick a variant, or
+ * fill in a price.
  */
 export function recipeCost(recipeId: string, catalog: Catalog): RecipeCost {
   const recipe = catalog.recipes.get(recipeId)
@@ -198,15 +256,20 @@ export function recipeCost(recipeId: string, catalog: Catalog): RecipeCost {
   const exploded = explodeRecipe(recipeId, recipe.yield_portions, catalog)
   const gaps = exploded.gaps
   let total = 0
-  for (const [ingId, qty] of exploded.requirements) {
-    const ing = catalog.ingredients.get(ingId)
-    if (!ing) {
-      if (!gaps.missingRefs.includes(ingId)) gaps.missingRefs.push(ingId)
+  for (const [itemId, qty] of exploded.requirements) {
+    const item = catalog.items.get(itemId)
+    if (!item) {
+      if (!gaps.missingRefs.includes(itemId)) gaps.missingRefs.push(itemId)
       continue
     }
-    const unit = epUnitCost(ing)
+    const variant = costingVariant(itemId, catalog)
+    if (!variant) {
+      if (!gaps.itemsWithoutPreferred.includes(itemId)) gaps.itemsWithoutPreferred.push(itemId)
+      continue
+    }
+    const unit = epUnitCost(variant)
     if (unit === null) {
-      if (!gaps.unpricedIngredients.includes(ingId)) gaps.unpricedIngredients.push(ingId)
+      if (!gaps.unpricedItems.includes(itemId)) gaps.unpricedItems.push(itemId)
       continue
     }
     total += unit * qty

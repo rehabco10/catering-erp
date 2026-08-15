@@ -2,22 +2,23 @@ import { proxy } from "valtio"
 
 import type { Catalog } from "@/engine/costing"
 import { menuCost } from "@/engine/costing"
-import type { Ingredient, Menu, Policy, Recipe, Supplier } from "@/engine/schemas"
+import type { Item, ItemVariant, Menu, Policy, Recipe, Supplier } from "@/engine/schemas"
 import { validateCatalogue, type Issue } from "@/engine/validation"
 import {
-  SEED_INGREDIENTS,
+  SEED_ITEMS,
   SEED_MENUS,
   SEED_POLICY,
   SEED_RECIPES,
   SEED_SUPPLIERS,
+  SEED_VARIANTS,
 } from "./seed"
 
 /**
  * The catalogue draft, held in memory.
  *
  * PocketBase persistence comes later — the shapes here are exactly
- * `src/lib/schemas.ts`, so the mapping is 1:1 and the engine never learns
- * where the data came from. That separation is the point: `lib/` is pure
+ * `src/engine/schemas.ts`, so the mapping is 1:1 and the engine never learns
+ * where the data came from. That separation is the point: `engine/` is pure
  * functions over plain records, `store/` is the mutable draft plus the actions
  * that edit it, and every screen reads derived numbers rather than storing them.
  */
@@ -25,7 +26,9 @@ import {
 export interface OpsState {
   policy: Policy
   suppliers: Supplier[]
-  ingredients: Ingredient[]
+  items: Item[]
+  /** Flat, with an `item` foreign key — the shape PocketBase will want. */
+  variants: ItemVariant[]
   recipes: Recipe[]
   menus: Menu[]
   /* ── canvas state ──────────────────────────────────────────────
@@ -47,7 +50,8 @@ export interface OpsState {
 export const state = proxy<OpsState>({
   policy: { ...SEED_POLICY },
   suppliers: SEED_SUPPLIERS,
-  ingredients: SEED_INGREDIENTS,
+  items: SEED_ITEMS,
+  variants: SEED_VARIANTS,
   recipes: SEED_RECIPES,
   menus: SEED_MENUS,
   selectedId: "root",
@@ -70,8 +74,16 @@ const nextId = (prefix: string) => `${prefix}_${Date.now().toString(36)}${(count
  * the React-level caching lives.
  */
 export function catalogFrom(s: OpsState = state): Catalog {
+  const variantsByItem = new Map<string, ItemVariant[]>()
+  for (const v of s.variants) {
+    const list = variantsByItem.get(v.item)
+    if (list) list.push(v)
+    else variantsByItem.set(v.item, [v])
+  }
   return {
-    ingredients: new Map(s.ingredients.map((i) => [i.id, i])),
+    items: new Map(s.items.map((i) => [i.id, i])),
+    variants: new Map(s.variants.map((v) => [v.id, v])),
+    variantsByItem,
     recipes: new Map(s.recipes.map((r) => [r.id, r])),
     menus: new Map(s.menus.map((m) => [m.id, m])),
     policy: s.policy,
@@ -87,44 +99,104 @@ export function issuesFor(s: OpsState = state, now: Date = new Date()): Issue[] 
 
 /* ── lookups ────────────────────────────────────────────────────── */
 
-export const ingredientById = (id: string, s: OpsState = state) =>
-  s.ingredients.find((i) => i.id === id)
+export const itemById = (id: string, s: OpsState = state) => s.items.find((i) => i.id === id)
+export const variantById = (id: string | null, s: OpsState = state) =>
+  id ? s.variants.find((v) => v.id === id) : undefined
+export const variantsOf = (itemId: string, s: OpsState = state) =>
+  s.variants.filter((v) => v.item === itemId)
 export const recipeById = (id: string, s: OpsState = state) => s.recipes.find((r) => r.id === id)
 export const menuById = (id: string, s: OpsState = state) => s.menus.find((m) => m.id === id)
 export const supplierById = (id: string | null, s: OpsState = state) =>
   id ? s.suppliers.find((x) => x.id === id) : undefined
 
-/* ── actions: ingredients ───────────────────────────────────────── */
+/* ── actions: items and their variants ──────────────────────────── */
 
 /**
- * The add-an-ingredient payload. Collected in full by the wizard, so no
- * half-built row ever reaches the store — which is what keeps
- * `ingredient.no_cost` a finding about real data rather than about typing.
- * Stock starts at zero: an ingredient is created, then received.
+ * The add-an-item payload. The wizard collects the item and its first variant
+ * together — an item with no way to buy it is a blocking finding the moment it
+ * exists, so creating one on purpose would be creating a defect.
  */
-export type NewIngredient = Omit<Ingredient, "id" | "on_hand">
+export type NewItem = Omit<Item, "id" | "preferred_variant">
+export type NewVariant = Omit<ItemVariant, "id" | "item" | "on_hand">
 
-export function addIngredient(data: NewIngredient): string {
-  const id = nextId("ing")
-  state.ingredients.push({ id, on_hand: 0, ...data })
+export function addItem(item: NewItem, firstVariant: NewVariant): string {
+  const itemId = nextId("it")
+  const variantId = nextId("v")
+  state.items.push({ ...item, id: itemId, preferred_variant: variantId })
+  // Stock starts at zero: an item is created, then received.
+  state.variants.push({ ...firstVariant, id: variantId, item: itemId, on_hand: 0 })
+  return itemId
+}
+
+export function addVariant(itemId: string, data: NewVariant): string | null {
+  const item = itemById(itemId)
+  if (!item) return null
+  const id = nextId("v")
+  state.variants.push({ ...data, id, item: itemId, on_hand: 0 })
+  // First variant on an item becomes its costing basis by default; later ones
+  // never displace a choice already made.
+  if (!item.preferred_variant) item.preferred_variant = id
   return id
 }
 
-/** Receive a delivery: stock in, at as-purchased quantity. */
-export function receiveStock(ingId: string, packs: number) {
-  const ing = ingredientById(ingId)
-  if (!ing || packs <= 0) return
-  ing.on_hand += packs * ing.pack_size
+/** Choose the costing basis. Refuses a variant belonging to another item. */
+export function setPreferredVariant(itemId: string, variantId: string) {
+  const item = itemById(itemId)
+  const variant = variantById(variantId)
+  if (!item || variant?.item !== itemId) return
+  item.preferred_variant = variantId
 }
 
-/** Refuses to remove an ingredient any recipe still calls for. */
-export function removeIngredient(ingId: string): { ok: boolean; usedBy: number } {
+/**
+ * Remove a purchase option.
+ *
+ * If it was the costing basis, the pointer is cleared rather than repointed at
+ * a sibling: repointing would move every recipe cost touching this item without
+ * anyone asking. The resulting `item.no_preferred` is blocking, which is the
+ * correct amount of noise.
+ */
+export function removeVariant(variantId: string) {
+  const variant = variantById(variantId)
+  if (!variant) return
+  const item = itemById(variant.item)
+  if (item?.preferred_variant === variantId) item.preferred_variant = null
+  const i = state.variants.findIndex((v) => v.id === variantId)
+  if (i >= 0) state.variants.splice(i, 1)
+}
+
+/** Receive a delivery: stock in, against the variant that actually arrived. */
+export function receiveStock(variantId: string, packs: number) {
+  const variant = variantById(variantId)
+  if (!variant || packs <= 0) return
+  variant.on_hand += packs * variant.pack_size
+}
+
+/** Refuses to remove an item any recipe still calls for; takes its variants with it. */
+export function removeItem(itemId: string): { ok: boolean; usedBy: number } {
   const usedBy = state.recipes.filter((r) =>
-    r.lines.some((l) => l.kind === "ingredient" && l.ref === ingId),
+    r.lines.some((l) => l.kind === "item" && l.ref === itemId),
   ).length
   if (usedBy > 0) return { ok: false, usedBy }
-  const i = state.ingredients.findIndex((x) => x.id === ingId)
-  if (i >= 0) state.ingredients.splice(i, 1)
+  state.variants = state.variants.filter((v) => v.item !== itemId)
+  const i = state.items.findIndex((x) => x.id === itemId)
+  if (i >= 0) state.items.splice(i, 1)
+  return { ok: true, usedBy: 0 }
+}
+
+/* ── actions: suppliers ─────────────────────────────────────────── */
+
+export function addSupplier(data: Omit<Supplier, "id">): string {
+  const id = nextId("sup")
+  state.suppliers.push({ id, ...data })
+  return id
+}
+
+/** Refuses to remove a supplier any purchase variant still points at. */
+export function removeSupplier(supplierId: string): { ok: boolean; usedBy: number } {
+  const usedBy = state.variants.filter((v) => v.supplier === supplierId).length
+  if (usedBy > 0) return { ok: false, usedBy }
+  const i = state.suppliers.findIndex((x) => x.id === supplierId)
+  if (i >= 0) state.suppliers.splice(i, 1)
   return { ok: true, usedBy: 0 }
 }
 
@@ -132,7 +204,7 @@ export function removeIngredient(ingId: string): { ok: boolean; usedBy: number }
 
 export function addRecipeLine(
   recipeId: string,
-  kind: "ingredient" | "recipe",
+  kind: "item" | "recipe",
   ref: string,
   qty: number,
 ) {

@@ -1,13 +1,15 @@
-import { menuCost, menuVerdict, recipeCost, type Catalog } from "./costing.js"
+import { costingVariant, epUnitCost, menuCost, menuVerdict, recipeCost, type Catalog } from "./costing.js"
+import { itemOnHand, preferredPremium } from "./inventory.js"
 import type { Supplier } from "./schemas.js"
 
 /**
  * Catalogue validation.
  *
  * Every rule here corresponds to a way the raw-to-menu chain actually goes
- * wrong — a menu priced below its own food cost, an ingredient nobody costed,
- * meat from a supplier whose halal certificate lapsed, a sub-recipe that
- * reaches itself. See `docs/catering-engine.md` for the sourcing.
+ * wrong — a menu priced below its own food cost, an item nobody chose a
+ * costing basis for, meat from a supplier whose halal certificate lapsed, a
+ * sub-recipe that reaches itself. See `docs/catering-engine.md` for the
+ * sourcing.
  *
  * `error` blocks: the menu cannot be sold, or the money is wrong.
  * `warning` is advisory — worth attention before it becomes an error.
@@ -52,7 +54,7 @@ export interface Issue {
   level: IssueLevel
   /** Which rule fired — stable key, safe to use for i18n lookup. */
   code: string
-  scope: "ingredient" | "recipe" | "menu"
+  scope: "item" | "variant" | "recipe" | "menu"
   entityId: string
   message: string
 }
@@ -62,9 +64,9 @@ export interface Issue {
 export type IssueCategory = "menu" | "kitchen" | "supply" | "compliance" | "other"
 
 const COMPLIANCE_CODES = new Set([
-  "ingredient.halal_cert_missing",
-  "ingredient.halal_cert_expired",
-  "ingredient.no_supplier",
+  "variant.halal_cert_missing",
+  "variant.halal_cert_expired",
+  "variant.no_supplier",
 ])
 
 /** Derived from the code, not stored — one mapping instead of a second field. */
@@ -72,7 +74,7 @@ export function categoryOf(code: string): IssueCategory {
   if (COMPLIANCE_CODES.has(code)) return "compliance"
   if (code.startsWith("menu.")) return "menu"
   if (code.startsWith("recipe.")) return "kitchen"
-  if (code.startsWith("ingredient.")) return "supply"
+  if (code.startsWith("item.") || code.startsWith("variant.")) return "supply"
   return "other"
 }
 
@@ -89,42 +91,80 @@ export interface ValidationInput {
 
 export function validateCatalogue(input: ValidationInput): Issue[] {
   const { catalog, suppliers, now } = input
-  const today = now.toISOString().slice(0, 10)
   const issues: Issue[] = []
+  const today = now.toISOString().slice(0, 10)
   const supplierById = new Map(suppliers.map((s) => [s.id, s]))
   const at = (level: IssueLevel, code: string, scope: Issue["scope"], entityId: string, message: string) =>
     issues.push({ level, code, scope, entityId, message })
 
-  /* ── ingredients ──────────────────────────────────────────────── */
+  /* ── items ────────────────────────────────────────────────────── */
 
-  for (const ing of catalog.ingredients.values()) {
-    const label = N(ing)
-    if (ing.ap_cost_sar === null) {
-      // A warning, not an error: an unpriced item is a gap in the costing, and
+  /**
+   * How much dearer the costing basis may be than the cheapest priced
+   * alternative before it is worth someone's attention. Under this, the gap is
+   * ordinary supplier drift and flagging it would be noise.
+   */
+  const PREMIUM_TOLERANCE = 0.05
+
+  for (const item of catalog.items.values()) {
+    const label = N(item)
+    const variants = catalog.variantsByItem.get(item.id) ?? []
+
+    if (variants.length === 0) {
+      at("error", "item.no_variants", "item", item.id, M("«{name}» بلا أي عبوة شراء — لا يمكن شراؤه ولا تسعيره.", { name: label }))
+      continue
+    }
+
+    const preferred = costingVariant(item.id, catalog)
+    if (!preferred) {
+      at("error", "item.no_preferred", "item", item.id, M("«{name}» بلا عبوة معتمدة — كل وصفة تستخدمه تُحسب بصفر.", { name: label }))
+    } else if (epUnitCost(preferred) === null) {
+      // A warning, not an error: an unpriced basis is a gap in the costing, and
       // the menu-level rules turn that into a blocking finding only where it
       // actually distorts a price.
-      at("warning", "ingredient.no_cost", "ingredient", ing.id, M("«{name}» بلا سعر شراء — لا يدخل في تكلفة أي وصفة.", { name: label }))
+      at("warning", "item.preferred_unpriced", "item", item.id, M("«{name}»: العبوة المعتمدة «{variant}» بلا سعر شراء.", { name: label, variant: N(preferred) }))
     }
-    if (ing.yield_pct >= 100 && (ing.category === "protein" || ing.category === "produce")) {
-      at("warning", "ingredient.suspicious_yield", "ingredient", ing.id, M("«{name}» بنسبة استخلاص 100% — اللحوم والخضار تفقد جزءًا في التنظيف.", { name: label }))
+
+    const premium = preferredPremium(item.id, catalog)
+    if (premium !== null && premium > PREMIUM_TOLERANCE) {
+      at("warning", "item.cheaper_variant_available", "item", item.id, M("«{name}»: العبوة المعتمدة أغلى بـ {pct}% من أرخص البدائل.", { name: label, pct: n1(premium * 100) }))
     }
-    if (ing.on_hand < ing.par_level) {
-      at("warning", "ingredient.below_par", "ingredient", ing.id, M("«{name}»: الرصيد {have} دون الحد الأدنى {par}.", { name: label, have: n1(ing.on_hand), par: n1(ing.par_level) }))
+
+    const onHand = itemOnHand(item.id, catalog)
+    if (onHand < item.par_level) {
+      at("warning", "item.below_par", "item", item.id, M("«{name}»: الرصيد {have} دون الحد الأدنى {par}.", { name: label, have: n1(onHand), par: n1(item.par_level) }))
     }
-    if (!ing.supplier) {
-      at(ing.halal_critical ? "error" : "warning", "ingredient.no_supplier", "ingredient", ing.id, M("«{name}» بلا مورد معتمد.", { name: label }))
+  }
+
+  /* ── purchase variants ────────────────────────────────────────── */
+
+  for (const variant of catalog.variants.values()) {
+    const item = catalog.items.get(variant.item)
+    if (!item) continue
+    // Named by item and variant together: «دجاج طازج — كرتون ١٠ كجم» is what a
+    // buyer recognises, where either half alone is ambiguous.
+    const label = `${N(item)} — ${N(variant)}`
+
+    if (variant.yield_pct >= 100 && (item.category === "protein" || item.category === "produce")) {
+      at("warning", "variant.suspicious_yield", "variant", variant.id, M("«{name}» بنسبة استخلاص 100% — اللحوم والخضار تفقد جزءًا في التنظيف.", { name: label }))
+    }
+
+    if (!variant.supplier) {
+      at(item.halal_critical ? "error" : "warning", "variant.no_supplier", "variant", variant.id, M("«{name}» بلا مورد معتمد.", { name: label }))
       continue
     }
-    const sup = supplierById.get(ing.supplier)
+    const sup = supplierById.get(variant.supplier)
     if (!sup) {
-      at("error", "ingredient.no_supplier", "ingredient", ing.id, M("«{name}» مرتبط بمورد غير موجود.", { name: label }))
+      at("error", "variant.no_supplier", "variant", variant.id, M("«{name}» مرتبطة بمورد غير موجود.", { name: label }))
       continue
     }
-    if (ing.halal_critical) {
+    // Checked on every variant, not only the preferred one: an uncertified
+    // pack is stock you may be holding, whichever one prices the recipes.
+    if (item.halal_critical) {
       if (!sup.halal_cert_no) {
-        at("error", "ingredient.halal_cert_missing", "ingredient", ing.id, M("«{name}» من مورد بلا شهادة حلال: {supplier}.", { name: label, supplier: N(sup) }))
+        at("error", "variant.halal_cert_missing", "variant", variant.id, M("«{name}» من مورد بلا شهادة حلال: {supplier}.", { name: label, supplier: N(sup) }))
       } else if (sup.halal_cert_expiry && sup.halal_cert_expiry < today) {
-        at("error", "ingredient.halal_cert_expired", "ingredient", ing.id, M("شهادة الحلال لمورد «{name}» منتهية بتاريخ {date}.", { name: N(sup), date: sup.halal_cert_expiry }))
+        at("error", "variant.halal_cert_expired", "variant", variant.id, M("شهادة الحلال لمورد «{name}» منتهية بتاريخ {date}.", { name: N(sup), date: sup.halal_cert_expiry }))
       }
     }
   }
@@ -139,7 +179,7 @@ export function validateCatalogue(input: ValidationInput): Issue[] {
     }
     for (const line of recipe.lines) {
       const exists =
-        line.kind === "ingredient" ? catalog.ingredients.has(line.ref) : catalog.recipes.has(line.ref)
+        line.kind === "item" ? catalog.items.has(line.ref) : catalog.recipes.has(line.ref)
       if (!exists) {
         at("error", "recipe.missing_ref", "recipe", recipe.id, M("وصفة «{name}» تشير إلى عنصر محذوف.", { name: label }))
       }
@@ -164,8 +204,8 @@ export function validateCatalogue(input: ValidationInput): Issue[] {
       continue
     }
     const cost = menuCost(menu.id, catalog)
-    if (cost.gaps.unpricedIngredients.length > 0) {
-      at("warning", "menu.incomplete_cost", "menu", menu.id, M("تكلفة قائمة «{name}» ناقصة: {count} مكوّن بلا سعر.", { name: label, count: n(cost.gaps.unpricedIngredients.length) }))
+    if (cost.gaps.unpricedItems.length > 0 || cost.gaps.itemsWithoutPreferred.length > 0) {
+      at("warning", "menu.incomplete_cost", "menu", menu.id, M("تكلفة قائمة «{name}» ناقصة: {count} مادة بلا سعر.", { name: label, count: n(cost.gaps.unpricedItems.length + cost.gaps.itemsWithoutPreferred.length) }))
     }
     switch (menuVerdict(cost, catalog.policy)) {
       case "unpriced":

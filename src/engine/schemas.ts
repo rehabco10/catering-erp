@@ -98,16 +98,61 @@ export const Supplier = z.object({
 })
 export type Supplier = z.infer<typeof Supplier>
 
-/* ── ingredients ────────────────────────────────────────────────── */
+/* ── items and their purchase variants ──────────────────────────── */
 
-export const Ingredient = z.object({
+/**
+ * What a recipe consumes — a kitchen fact.
+ *
+ * Deliberately carries nothing about buying. Supplier, pack, price, yield and
+ * stock all differ per purchase option, which is why they live on the variant:
+ * flattening them onto the item is what made a second source impossible and
+ * pinned the yield to the wrong thing (whole chicken trims to ~72%, boned
+ * breast to ~98% — same item, different form).
+ */
+export const Item = z.object({
   id: z.string(),
   name_ar: z.string(),
   name_en: z.string(),
   category: IngredientCategory,
-  storage: StorageClass,
   /** The unit recipes are written in. */
   base_unit: BaseUnit,
+  /** A property of the food, not of the pack. */
+  allergens: z.array(Allergen),
+  /** Meat/poultry: the halal certificate check applies to each variant's supplier. */
+  halal_critical: z.boolean(),
+  /**
+   * Base units to keep on the shelf between deliveries, summed across every
+   * variant. The kitchen runs out of *rice*, not of *Al-Moun rice*.
+   */
+  par_level: z.number().nonnegative(),
+  /**
+   * The variant that prices this item, chosen explicitly.
+   *
+   * Deterministic and auditable: a recipe's cost changes only when someone
+   * decides it does. A "cheapest wins" rule would silently re-cost every menu
+   * that touches the item the moment a supplier lists a cheap SKU — and menu
+   * prices are quoted to clients. `cheaperVariantAvailable` surfaces the
+   * better option instead of applying it.
+   */
+  preferred_variant: z.string().nullable(),
+})
+export type Item = z.infer<typeof Item>
+
+/**
+ * What you buy — a purchasing fact.
+ *
+ * One item, many variants: Al-Moun's 20 kg sack and Haramain's 10 kg bag are
+ * both basmati rice; fresh and frozen lamb are both lamb.
+ */
+export const ItemVariant = z.object({
+  id: z.string(),
+  item: z.string(),
+  /** How this option is known, e.g. «كيس ٢٠ كجم» / "20 kg sack". */
+  name_ar: z.string(),
+  name_en: z.string(),
+  supplier: z.string().nullable(),
+  /** The supplier's own code. Groundwork for purchase orders; nothing reads it yet. */
+  supplier_ref: z.string().nullable(),
   /** The unit it is bought in, and how many base units one pack holds. */
   pack_unit: PackUnit,
   pack_size: z.number().positive(),
@@ -116,20 +161,16 @@ export const Ingredient = z.object({
   /**
    * Usable share after trimming, peeling, boning, draining or cooking loss,
    * as a percentage. 100 = no loss. This is what turns an as-purchased price
-   * into an edible-portion price; costing a recipe at AP cost understates it
-   * by exactly the trim.
+   * into an edible-portion price; costing at AP cost understates it by exactly
+   * the trim.
    */
   yield_pct: z.number().min(1).max(100),
-  allergens: z.array(Allergen),
-  /** Base units currently in store. */
+  /** Fresh and frozen are two variants of one item, so storage belongs here. */
+  storage: StorageClass,
+  /** Base units of this variant currently in store. */
   on_hand: z.number().nonnegative(),
-  /** Base units to keep on the shelf between deliveries. */
-  par_level: z.number().nonnegative(),
-  supplier: z.string().nullable(),
-  /** Meat/poultry: the halal certificate check applies to its supplier. */
-  halal_critical: z.boolean(),
 })
-export type Ingredient = z.infer<typeof Ingredient>
+export type ItemVariant = z.infer<typeof ItemVariant>
 
 /* ── recipes ────────────────────────────────────────────────────── */
 
@@ -142,8 +183,11 @@ export type Ingredient = z.infer<typeof Ingredient>
  */
 export const RecipeLine = z.object({
   id: z.string(),
-  kind: z.enum(["ingredient", "recipe"]),
-  /** Ingredient id or recipe id, per `kind`. */
+  kind: z.enum(["item", "recipe"]),
+  /**
+   * Item id or recipe id, per `kind`. Never a variant id: a recipe calls for
+   * rice, and which rice it is priced through is the item's decision.
+   */
   ref: z.string(),
   /**
    * Quantity for ONE BATCH of the parent recipe, in the referent's base unit

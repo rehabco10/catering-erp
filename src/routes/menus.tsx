@@ -163,6 +163,9 @@ export function MenusPage() {
                       </p>
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className="text-[12px] tabular-nums">
+                          {/* "≥" because uncosted dishes can only add to it —
+                              see the pricing block in MenuForm. */}
+                          {menu.items.some((i) => catalog.recipes.get(i.recipe)?.draft) ? "≥ " : ""}
                           {money(cost.perCover)}
                           <span className="text-muted-foreground">
                             {" / "}

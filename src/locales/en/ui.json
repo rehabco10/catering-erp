@@ -126,7 +126,8 @@
     "course": "Section",
     "meal": "Meal period",
     "draft": "Draft",
-    "uncosted": "Uncosted"
+    "uncosted": "Uncosted",
+    "coverage": "Costed"
   },
   "policy": {
     "target_food_cost_pct": "Target food cost",

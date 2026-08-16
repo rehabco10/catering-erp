@@ -53,6 +53,11 @@ export function MenuForm({
   if (!menu) return null
 
   const cost = menuCost(menuId, catalog)
+  // How much of the menu is actually costed. The engine cannot know this — a
+  // draft simply contributes nothing — so it is computed for display.
+  const uncosted = menu.items.filter((i) => catalog.recipes.get(i.recipe)?.draft).length
+  const coveragePct =
+    menu.items.length > 0 ? ((menu.items.length - uncosted) / menu.items.length) * 100 : 100
   const verdict = menuVerdict(cost, snap.policy)
   const suggested = priceForTarget(cost.perCover, snap.policy.target_food_cost_pct)
   const tone = toneClasses[foodCostTone(cost.foodCostPct, snap.policy.target_food_cost_pct)]
@@ -266,12 +271,22 @@ export function MenuForm({
               {t("field.cost")}
             </span>
             <span className="text-2xl font-bold text-[color:var(--brand-navy-deep)] tabular-nums">
+              {/* A partially-costed menu's cost is a LOWER BOUND — costing the
+                  remaining dishes can only add to it. Printing it bare invites
+                  reading a 35%-costed package as cheaper than a 79%-costed one,
+                  which is exactly backwards. */}
+              {uncosted > 0 ? "≥ " : ""}
               {money(cost.perCover)}
             </span>
           </div>
           <div className="mt-1 text-[11px] text-[color:var(--brand-navy-deep)]/70 tabular-nums">
             {money(cost.rawPerCover)} + {t("policy.q_factor_pct")} {money(cost.qFactorPerCover)}
           </div>
+          {uncosted > 0 && (
+            <div className="mt-1.5 text-[11px] font-semibold text-[color:var(--brand-amber-deep)] tabular-nums">
+              {t("field.coverage")} {dec2(coveragePct)}% · {t("field.uncosted")} {uncosted}
+            </div>
+          )}
         </div>
 
         <div className="mt-3 grid gap-3 lg:grid-cols-3">

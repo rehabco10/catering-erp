@@ -126,7 +126,8 @@
     "course": "القسم",
     "meal": "الوجبة",
     "draft": "مسودة",
-    "uncosted": "بلا تكلفة"
+    "uncosted": "بلا تكلفة",
+    "coverage": "التغطية"
   },
   "policy": {
     "target_food_cost_pct": "مستهدف نسبة تكلفة الطعام",

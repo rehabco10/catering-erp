@@ -121,8 +121,32 @@ export const SEED_ITEMS: Item[] = [
   item("it_cardamom", "هيل", "Cardamom", "dry_goods", "kg", 4, "v_cardamom"),
   item("it_dates", "تمر", "Dates", "dry_goods", "kg", 100, "v_dates"),
   item("it_nuts", "مكسرات", "Mixed nuts", "dry_goods", "kg", 20, "v_nuts", { allergens: ["nuts"] }),
+  // produce, second wave — added when the dish recipes were researched
+  item("it_spinach", "سبانخ", "Spinach", "produce", "kg", 25, "v_spinach"),
+  item("it_carrot", "جزر", "Carrot", "produce", "kg", 50, "v_carrot"),
+  item("it_courgette", "كوسا", "Courgette", "produce", "kg", 40, "v_courgette"),
+  item("it_peas", "بازلاء", "Green peas", "produce", "kg", 30, "v_peas"),
+  item("it_mint", "نعناع", "Mint", "produce", "kg", 8, "v_mint"),
+  item("it_rocket", "جرجير", "Rocket", "produce", "kg", 12, "v_rocket"),
+  item("it_cabbage", "ملفوف", "Cabbage", "produce", "kg", 35, "v_cabbage"),
+  item("it_beetroot", "بنجر", "Beetroot", "produce", "kg", 20, "v_beetroot"),
+  item("it_vineleaf", "ورق عنب", "Vine leaves", "produce", "kg", 15, "v_vineleaf"),
+  // dry goods, second wave
+  item("it_pasta", "مكرونة", "Pasta", "dry_goods", "kg", 80, "v_pasta", { allergens: ["gluten"] }),
+  item("it_vermicelli", "شعيرية", "Vermicelli", "dry_goods", "kg", 20, "v_vermicelli", { allergens: ["gluten"] }),
+  item("it_semolina", "سميد", "Semolina", "dry_goods", "kg", 40, "v_semolina", { allergens: ["gluten"] }),
+  item("it_breadcrumb", "بقسماط", "Breadcrumbs", "dry_goods", "kg", 25, "v_breadcrumb", { allergens: ["gluten"] }),
+  item("it_tomatopaste", "صلصة طماطم", "Tomato paste", "dry_goods", "kg", 30, "v_tomatopaste"),
+  item("it_oliveoil", "زيت زيتون", "Olive oil", "dry_goods", "l", 24, "v_oliveoil"),
+  item("it_vinegar", "خل", "Vinegar", "dry_goods", "l", 20, "v_vinegar"),
+  item("it_olive", "زيتون", "Olives", "dry_goods", "kg", 20, "v_olive"),
+  // dairy, second wave
+  item("it_milk", "حليب", "Milk", "dairy", "l", 120, "v_milk", { allergens: ["dairy"] }),
+  item("it_qishta", "قشطة", "Qishta", "dairy", "kg", 25, "v_qishta", { allergens: ["dairy"] }),
   // bakery, beverage, disposables
   item("it_bread", "خبز عربي", "Arabic bread", "bakery", "ea", 1200, "v_bread", { allergens: ["gluten"] }),
+  item("it_kunafa", "عجينة كنافة", "Kunafa dough", "bakery", "kg", 30, "v_kunafa", { allergens: ["gluten"] }),
+  item("it_filo", "رقائق بقلاوة", "Filo pastry", "bakery", "kg", 25, "v_filo", { allergens: ["gluten"] }),
   item("it_water", "مياه ٢٠٠ مل", "Water 200ml", "beverage", "ea", 4800, "v_water"),
   item("it_juice", "عصير", "Juice", "beverage", "ea", 960, "v_juice"),
   item("it_mealbox", "علبة وجبة", "Meal box", "disposable", "ea", 3000, "v_mealbox"),
@@ -212,9 +236,33 @@ export const SEED_VARIANTS: ItemVariant[] = [
   variant("v_cardamom", "it_cardamom", "كجم", "1 kg", "sup_dry", "kg", 1, 175, 100, "dry", 8), // estimated
   variant("v_dates", "it_dates", "صندوق ٥ كجم", "5 kg box", "sup_dry", "box", 5, 85, 96, "dry", 150), // estimated
   variant("v_nuts", "it_nuts", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 210, 100, "dry", 18), // estimated
+  // ── produce, second wave ────────────────────────────────────────
+  variant("v_spinach", "it_spinach", "صندوق ٥ كجم", "5 kg box", "sup_produce", "box", 5, 28, 70, "chilled", 20), // estimated
+  variant("v_carrot", "it_carrot", "كيس ١٠ كجم", "10 kg sack", "sup_produce", "sack", 10, 32, 80, "dry", 55), // estimated
+  variant("v_courgette", "it_courgette", "صندوق ٦ كجم", "6 kg box", "sup_produce", "box", 6, 26, 88, "chilled", 42), // estimated
+  variant("v_peas", "it_peas", "كرتون ١٠ كجم", "10 kg case", "sup_produce", "case", 10, 95, 100, "frozen", 35), // estimated
+  variant("v_mint", "it_mint", "ربطة ١ كجم", "1 kg bunch", "sup_produce", "kg", 1, 12, 55, "chilled", 6), // estimated
+  variant("v_rocket", "it_rocket", "صندوق ٣ كجم", "3 kg box", "sup_produce", "box", 3, 18, 65, "chilled", 10), // estimated
+  variant("v_cabbage", "it_cabbage", "كيس ٨ كجم", "8 kg sack", "sup_produce", "sack", 8, 20, 78, "chilled", 40), // estimated
+  variant("v_beetroot", "it_beetroot", "صندوق ٦ كجم", "6 kg box", "sup_produce", "box", 6, 20, 75, "chilled", 22), // estimated
+  variant("v_vineleaf", "it_vineleaf", "صندوق ٥ كجم", "5 kg box", "sup_produce", "box", 5, 60, 95, "chilled", 12), // estimated
+  // ── dry goods, second wave ──────────────────────────────────────
+  variant("v_pasta", "it_pasta", "كيس ١٠ كجم", "10 kg sack", "sup_dry", "sack", 10, 62, 100, "dry", 90), // estimated
+  variant("v_vermicelli", "it_vermicelli", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 32, 100, "dry", 25), // estimated
+  variant("v_semolina", "it_semolina", "كيس ١٠ كجم", "10 kg sack", "sup_dry", "sack", 10, 48, 100, "dry", 45), // estimated
+  variant("v_breadcrumb", "it_breadcrumb", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 35, 100, "dry", 28), // estimated
+  variant("v_tomatopaste", "it_tomatopaste", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 48, 100, "dry", 32), // estimated
+  variant("v_oliveoil", "it_oliveoil", "عبوة ٤ لتر", "4 L tin", "sup_dry", "box", 4, 120, 100, "dry", 28), // estimated
+  variant("v_vinegar", "it_vinegar", "عبوة ٥ لتر", "5 L jug", "sup_dry", "box", 5, 22, 100, "dry", 24), // estimated
+  variant("v_olive", "it_olive", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 65, 90, "dry", 22), // estimated
+  // ── dairy, second wave ──────────────────────────────────────────
+  variant("v_milk", "it_milk", "كرتون ١٢ لتر", "12 L case", "sup_dairy", "case", 12, 66, 100, "chilled", 144), // estimated
+  variant("v_qishta", "it_qishta", "كرتون ٦ كجم", "6 kg case", "sup_dairy", "case", 6, 165, 100, "chilled", 28), // estimated
   // ── bakery, beverage, disposables ───────────────────────────────
   // Unpriced on purpose — anything built on bread costs light until this is filled in.
   variant("v_bread", "it_bread", "صينية ١٠٠ رغيف", "Tray of 100", "sup_dry", "tray", 100, null, 100, "dry", 800),
+  variant("v_kunafa", "it_kunafa", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 55, 100, "chilled", 35), // estimated
+  variant("v_filo", "it_filo", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 62, 100, "frozen", 28), // estimated
   variant("v_water", "it_water", "كرتون ٤٨ حبة", "Case of 48", "sup_dairy", "case", 48, 11, 100, "dry", 9600), // estimated
   variant("v_juice", "it_juice", "كرتون ٢٤ حبة", "Case of 24", "sup_dairy", "case", 24, 40, 100, "chilled", 1440), // estimated
   variant("v_mealbox", "it_mealbox", "كرتون ٥٠٠ علبة", "Case of 500", "sup_dry", "case", 500, 240, 100, "dry", 4000), // estimated
@@ -223,26 +271,73 @@ export const SEED_VARIANTS: ItemVariant[] = [
 /* ── a few real dishes, actually costed ─────────────────────────── */
 
 /**
- * Bills of materials for six of the transcribed dishes.
+ * Bills of materials for the transcribed dishes.
  *
  * Keyed by the Arabic name rather than by recipe id: the ids come out of
  * `scripts/seed-from-docs.mjs` and shift the moment the source document
  * changes, whereas the name is what the document says.
  *
- * Six dishes across three sections — enough to prove the chain end to end
- * (item → variant → recipe → menu → food cost) at real prices. The other 113
- * stay drafts, which is the truth: nobody has costed them.
+ * **Compositions are researched, quantities are professional judgement.** The
+ * *ingredient lists* come from standard published recipes for each dish —
+ * mutabbal is aubergine, tahini, garlic, lemon, olive oil and thick yoghurt;
+ * tabbouleh is parsley, bulgur, tomato, mint, lemon and olive oil; macarona
+ * béchamel is pasta, mince, milk, flour and butter. The *amounts* are scaled to
+ * the batch yield the generator assigned and are not from the client.
  *
- * Quantities are per batch, at the batch yield the generator assigned
- * (50 portions for appetisers, 40 for mains).
+ * Salt, pepper and general seasoning are deliberately absent: the Q factor
+ * already carries them (`docs/catering-engine.md` §3), and listing them here
+ * would double-count.
+ *
+ * Batch yields: 50 portions for appetisers and desserts, 40 for mains.
  */
 const COSTED: Record<string, Array<[string, number]>> = {
-  متبل: [["it_eggplant", 5], ["it_tahini", 0.6], ["it_lemon", 0.5], ["it_garlic", 0.1], ["it_oil", 0.3]],
-  حمص: [["it_chickpea", 2.5], ["it_tahini", 0.8], ["it_lemon", 0.5], ["it_garlic", 0.12], ["it_oil", 0.4]],
-  تبولة: [["it_parsley", 2], ["it_burghul", 0.8], ["it_tomato", 1.5], ["it_lemon", 0.6], ["it_oil", 0.35]],
+  /* ── cold appetisers ─────────────────────────────────────────── */
+  متبل: [["it_eggplant", 5], ["it_tahini", 0.6], ["it_yogurt", 0.8], ["it_lemon", 0.5], ["it_garlic", 0.1], ["it_oliveoil", 0.3]],
+  "بابا غنوج": [["it_eggplant", 5.5], ["it_tahini", 0.5], ["it_lemon", 0.4], ["it_garlic", 0.1], ["it_oliveoil", 0.35]],
+  حمص: [["it_chickpea", 2.5], ["it_tahini", 0.8], ["it_lemon", 0.5], ["it_garlic", 0.12], ["it_oliveoil", 0.4]],
+  تبولة: [["it_parsley", 2], ["it_burghul", 0.8], ["it_tomato", 1.5], ["it_mint", 0.2], ["it_lemon", 0.6], ["it_oliveoil", 0.35]],
+  فتوش: [["it_lettuce", 2], ["it_tomato", 1.2], ["it_cucumber", 1.2], ["it_parsley", 0.3], ["it_mint", 0.15], ["it_bread", 20], ["it_lemon", 0.4], ["it_oliveoil", 0.35], ["it_vinegar", 0.1]],
   "سلطة خضراء": [["it_lettuce", 3], ["it_cucumber", 1.5], ["it_tomato", 1.5], ["it_onion", 0.4]],
+  "سلطة لبن": [["it_yogurt", 3], ["it_cucumber", 1.5], ["it_mint", 0.1], ["it_garlic", 0.05]],
+  دقوس: [["it_tomato", 3], ["it_garlic", 0.15], ["it_oil", 0.2], ["it_spice", 0.05]],
+  "ورق عنب": [["it_vineleaf", 1.5], ["it_rice", 1.2], ["it_tomato", 0.5], ["it_onion", 0.4], ["it_lemon", 0.4], ["it_oliveoil", 0.4]],
+  لبنة: [["it_yogurt", 6], ["it_oliveoil", 0.4]],
+  "سلطة بنجر": [["it_beetroot", 3.5], ["it_yogurt", 0.8], ["it_lemon", 0.3], ["it_oliveoil", 0.2]],
+  "سلطة سيزار": [["it_lettuce", 3.2], ["it_cheese", 0.5], ["it_bread", 20], ["it_cream", 0.4], ["it_lemon", 0.25], ["it_oliveoil", 0.3]],
+  "سلطة روسية": [["it_potato", 2.5], ["it_carrot", 1], ["it_peas", 0.8], ["it_cream", 0.8], ["it_lemon", 0.2]],
+  "سلطة ملفوف": [["it_cabbage", 3.5], ["it_carrot", 0.8], ["it_cream", 0.6], ["it_lemon", 0.3], ["it_sugar", 0.1]],
+  "سلطة المكرونة": [["it_pasta", 2.2], ["it_cream", 0.8], ["it_carrot", 0.5], ["it_peas", 0.4], ["it_cheese", 0.3]],
+  "سلطة جرجير": [["it_rocket", 2.5], ["it_tomato", 1], ["it_onion", 0.3], ["it_lemon", 0.3], ["it_oliveoil", 0.3]],
+  "طرشي مشكل": [["it_cucumber", 2], ["it_carrot", 1.5], ["it_cabbage", 1], ["it_vinegar", 1.2]],
+
+  /* ── hot appetisers ──────────────────────────────────────────── */
+  كبة: [["it_burghul", 1.5], ["it_beef", 2.2], ["it_onion", 0.8], ["it_spice", 0.08], ["it_oil", 1.5]],
   "سمبوسك لحم": [["it_flour", 2.2], ["it_beef", 2], ["it_onion", 0.8], ["it_oil", 1.2], ["it_spice", 0.08]],
+  "سمبوسك دجاج": [["it_flour", 2.2], ["it_chicken", 2], ["it_onion", 0.8], ["it_oil", 1.2], ["it_spice", 0.08]],
+  "سبرينج رول خضار": [["it_flour", 1.8], ["it_cabbage", 1.2], ["it_carrot", 0.8], ["it_peas", 0.4], ["it_onion", 0.4], ["it_oil", 1.4]],
+  "بطاطس حارة": [["it_potato", 5], ["it_oil", 1.5], ["it_spice", 0.12], ["it_garlic", 0.1]],
+  "بطاطس كروكيت": [["it_potato", 4.5], ["it_cheese", 0.6], ["it_flour", 0.5], ["it_egg", 8], ["it_breadcrumb", 0.7], ["it_oil", 1.6]],
+  "فطاير سبانخ": [["it_flour", 2.5], ["it_spinach", 2.5], ["it_onion", 0.7], ["it_lemon", 0.3], ["it_oliveoil", 0.5]],
+
+  /* ── mains ───────────────────────────────────────────────────── */
   "رز كابلي باللحم": [["it_rice", 6], ["it_lamb", 7], ["it_onion", 1.2], ["it_tomato", 0.8], ["it_oil", 0.7], ["it_spice", 0.15], ["it_cardamom", 0.03]],
+  "رز أبيض بالشعرية": [["it_rice", 6], ["it_vermicelli", 0.5], ["it_butter", 0.5], ["it_oil", 0.2]],
+  "مكرونة بالباشاميل": [["it_pasta", 4], ["it_beef", 3], ["it_milk", 5], ["it_flour", 0.5], ["it_butter", 0.6], ["it_cheese", 0.8], ["it_tomatopaste", 0.5], ["it_onion", 0.8]],
+  "خضار سوتيه": [["it_courgette", 3], ["it_carrot", 2.5], ["it_peas", 1.5], ["it_onion", 0.8], ["it_butter", 0.5], ["it_oil", 0.3]],
+  "مشاوي مشكلة": [["it_chicken", 5], ["it_beef", 4], ["it_lamb", 3], ["it_onion", 1], ["it_spice", 0.2], ["it_oil", 0.5]],
+  "سمك بالليمون": [["it_fish", 9], ["it_lemon", 1.2], ["it_garlic", 0.2], ["it_oil", 0.6], ["it_flour", 0.4]],
+  "جمبري مقلي": [["it_shrimp", 8], ["it_flour", 1], ["it_breadcrumb", 0.8], ["it_egg", 10], ["it_oil", 2]],
+  "بيكاتا بالشامبينيون": [["it_chicken", 8], ["it_mushroom", 2], ["it_cream", 1.5], ["it_flour", 0.4], ["it_butter", 0.5]],
+  "كردون بلو": [["it_chicken", 8], ["it_cheese", 1.5], ["it_breadcrumb", 1], ["it_egg", 10], ["it_flour", 0.6], ["it_oil", 2]],
+  "دجاج مع الكاجو": [["it_chicken", 8], ["it_nuts", 1], ["it_onion", 0.8], ["it_oil", 0.6], ["it_spice", 0.15]],
+
+  /* ── desserts ────────────────────────────────────────────────── */
+  بقلاوة: [["it_filo", 2.5], ["it_nuts", 1.5], ["it_butter", 1.2], ["it_sugar", 1.5]],
+  بسبوسة: [["it_semolina", 2.5], ["it_sugar", 1.8], ["it_yogurt", 1], ["it_butter", 0.8]],
+  "كريم كراميل": [["it_milk", 4], ["it_egg", 24], ["it_sugar", 1.2]],
+  "كنافة بالقشطة": [["it_kunafa", 2.5], ["it_qishta", 2], ["it_butter", 1], ["it_sugar", 1.5]],
+  "أم علي": [["it_filo", 1.5], ["it_milk", 4], ["it_cream", 1], ["it_nuts", 0.5], ["it_sugar", 0.8]],
+  "بودينج الأرز": [["it_rice", 1.2], ["it_milk", 5], ["it_sugar", 0.8], ["it_cream", 0.5]],
 }
 
 let lineSeq = 0

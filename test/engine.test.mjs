@@ -520,3 +520,14 @@ test("a station is defined by its inclusions, so no dishes is not empty", () => 
   const hit = check(cat).find((i) => i.code === "menu.no_items")
   assert.equal(hit.entityId, "hollow")
 })
+
+test("a station still has to be priced — it is sold for money", () => {
+  const cat = fixture()
+  cat.menus.set(
+    "station",
+    menu({ id: "station", service_line: "station", items: [], inclusions: ["الذبيحة"] }),
+  )
+  const hit = check(cat).find((i) => i.code === "menu.unpriced" && i.entityId === "station")
+  assert.ok(hit, "an inclusion-only package with no price is a blocking finding")
+  assert.equal(hit.level, "error")
+})

@@ -165,6 +165,38 @@ export const SEED_ITEMS: Item[] = [
   item("it_strawberry", "فراولة", "Strawberry", "produce", "kg", 15, "v_strawberry"),
   item("it_cherry", "كرز", "Cherries", "produce", "kg", 10, "v_cherry"),
   item("it_fruitmix", "فواكه مشكلة", "Mixed fruit", "produce", "kg", 60, "v_fruitmix"),
+  // ── premium proteins and international pantry ───────────────────
+  // What packages 3 and 4 are actually made of: a seafood and continental
+  // range the Hajj-catering catalogue never needed.
+  item("it_lobster", "استاكوزا", "Lobster", "protein", "kg", 12, "v_lobster", { allergens: ["shellfish"] }),
+  item("it_seafoodmix", "ثمار البحر مشكلة", "Mixed seafood", "protein", "kg", 20, "v_seafoodmix", { allergens: ["shellfish"] }),
+  item("it_salmon", "سالمون", "Salmon", "protein", "kg", 20, "v_salmon", { allergens: ["fish"] }),
+  item("it_seabass", "سمك قاروص", "Sea bass", "protein", "kg", 20, "v_seabass", { allergens: ["fish"] }),
+  item("it_grouper", "سمك هامور", "Grouper", "protein", "kg", 25, "v_grouper", { allergens: ["fish"] }),
+  item("it_tuna", "تونة معلّبة", "Canned tuna", "protein", "kg", 18, "v_tuna", { allergens: ["fish"] }),
+  item("it_veal", "لحم عجل", "Veal", "protein", "kg", 40, "v_veal", { halal_critical: true }),
+  item("it_turkey", "ديك رومي", "Turkey", "protein", "kg", 30, "v_turkey", { halal_critical: true }),
+  item("it_duck", "بط", "Duck", "protein", "kg", 20, "v_duck", { halal_critical: true }),
+  item("it_coldcuts", "لحوم باردة", "Cold cuts", "protein", "kg", 15, "v_coldcuts", { halal_critical: true }),
+  item("it_mozzarella", "جبن موزريلا", "Mozzarella", "dairy", "kg", 25, "v_mozzarella", { allergens: ["dairy"] }),
+  item("it_cheesemix", "أجبان مشكلة", "Cheese selection", "dairy", "kg", 12, "v_cheesemix", { allergens: ["dairy"] }),
+  item("it_ravioli", "رافيولي", "Ravioli", "dry_goods", "kg", 20, "v_ravioli", { allergens: ["gluten", "egg", "dairy"] }),
+  item("it_fettuccine", "فتوتشيني", "Fettuccine", "dry_goods", "kg", 30, "v_fettuccine", { allergens: ["gluten"] }),
+  item("it_lasagna", "شرائح لازانيا", "Lasagne sheets", "dry_goods", "kg", 25, "v_lasagna", { allergens: ["gluten"] }),
+  item("it_sushirice", "أرز سوشي", "Sushi rice", "dry_goods", "kg", 15, "v_sushirice"),
+  item("it_nori", "أوراق نوري", "Nori sheets", "dry_goods", "kg", 3, "v_nori"),
+  item("it_mayo", "مايونيز", "Mayonnaise", "dry_goods", "kg", 30, "v_mayo", { allergens: ["egg"] }),
+  item("it_pesto", "صوص بيستو", "Pesto", "dry_goods", "kg", 6, "v_pesto", { allergens: ["nuts", "dairy"] }),
+  item("it_oystersauce", "صوص المحار", "Oyster sauce", "dry_goods", "l", 8, "v_oystersauce", { allergens: ["shellfish"] }),
+  item("it_teriyaki", "صوص ترياكي", "Teriyaki sauce", "dry_goods", "l", 8, "v_teriyaki", { allergens: ["soy", "gluten"] }),
+  item("it_prunes", "برقوق مجفف", "Prunes", "dry_goods", "kg", 10, "v_prunes"),
+  item("it_raisin", "زبيب", "Raisins", "dry_goods", "kg", 12, "v_raisin"),
+  item("it_walnut", "جوز", "Walnuts", "dry_goods", "kg", 10, "v_walnut", { allergens: ["nuts"] }),
+  item("it_saffron", "زعفران", "Saffron", "dry_goods", "kg", 0.2, "v_saffron"),
+  item("it_apple", "تفاح", "Apple", "produce", "kg", 25, "v_apple"),
+  item("it_orange", "برتقال", "Orange", "produce", "kg", 25, "v_orange"),
+  item("it_bellpepper", "فلفل رومي", "Bell pepper", "produce", "kg", 25, "v_bellpepper"),
+  item("it_greenbean", "فاصوليا خضراء", "Green beans", "produce", "kg", 20, "v_greenbean"),
   // bakery, beverage, disposables
   item("it_bread", "خبز عربي", "Arabic bread", "bakery", "ea", 1200, "v_bread", { allergens: ["gluten"] }),
   item("it_kunafa", "عجينة كنافة", "Kunafa dough", "bakery", "kg", 30, "v_kunafa", { allergens: ["gluten"] }),
@@ -218,7 +250,7 @@ const variant = (
  *   · **tomato** — the basis is the dearer of the two, which trips
  *     `item.cheaper_variant_available`.
  */
-export const SEED_VARIANTS: ItemVariant[] = [
+const RAW_VARIANTS: ItemVariant[] = [
   // ── proteins ────────────────────────────────────────────────────
   variant("v_chicken_fresh", "it_chicken", "طازج — كرتون ١٠ كجم", "Fresh — 10 kg case", "sup_poultry", "case", 10, 155, 72, "chilled", 90), // sourced 15.50/kg
   variant("v_chicken_frozen", "it_chicken", "مجمّد — كرتون ١٢ كجم", "Frozen — 12 kg case", "sup_meat", "case", 12, 174, 74, "frozen", 0), // sourced 14.50/kg
@@ -299,6 +331,39 @@ export const SEED_VARIANTS: ItemVariant[] = [
   variant("v_strawberry", "it_strawberry", "صندوق ٢ كجم", "2 kg punnet box", "sup_produce", "box", 2, 34, 90, "chilled", 16), // estimated
   variant("v_cherry", "it_cherry", "كرتون ٣ كجم", "3 kg case", "sup_produce", "case", 3, 78, 95, "chilled", 11), // estimated
   variant("v_fruitmix", "it_fruitmix", "كرتون ١٠ كجم", "10 kg case", "sup_produce", "case", 10, 145, 72, "chilled", 65), // estimated
+  // ── premium proteins ────────────────────────────────────────────
+  variant("v_lobster", "it_lobster", "كرتون ٥ كجم", "5 kg case", "sup_sea", "case", 5, 700, 42, "frozen", 8), // estimated
+  variant("v_seafoodmix", "it_seafoodmix", "كرتون ٥ كجم", "5 kg case", "sup_sea", "case", 5, 210, 85, "frozen", 18), // estimated
+  variant("v_salmon", "it_salmon", "كرتون ٥ كجم", "5 kg case", "sup_sea", "case", 5, 475, 76, "chilled", 15), // sourced 95/kg
+  variant("v_seabass", "it_seabass", "كرتون ٥ كجم", "5 kg case", "sup_sea", "case", 5, 325, 55, "chilled", 16), // sourced 65/kg
+  variant("v_grouper", "it_grouper", "كرتون ٥ كجم", "5 kg case", "sup_sea", "case", 5, 375, 80, "chilled", 22), // sourced 75/kg
+  variant("v_tuna", "it_tuna", "كرتون ٦ كجم", "6 kg case", "sup_dry", "case", 6, 168, 100, "dry", 20), // estimated
+  variant("v_veal", "it_veal", "كرتون ١٠ كجم", "10 kg case", "sup_meat", "case", 10, 380, 80, "frozen", 35), // sourced 38/kg
+  variant("v_turkey", "it_turkey", "كرتون ١٢ كجم", "12 kg case", "sup_meat", "case", 12, 312, 66, "frozen", 24), // estimated
+  variant("v_duck", "it_duck", "كرتون ٨ كجم", "8 kg case", "sup_meat", "case", 8, 336, 62, "frozen", 16), // estimated
+  variant("v_coldcuts", "it_coldcuts", "كرتون ٣ كجم", "3 kg case", "sup_meat", "case", 3, 165, 100, "chilled", 12), // estimated
+  // ── international pantry ────────────────────────────────────────
+  variant("v_mozzarella", "it_mozzarella", "كرتون ٥ كجم", "5 kg case", "sup_dairy", "case", 5, 155, 100, "chilled", 26), // estimated
+  variant("v_cheesemix", "it_cheesemix", "كرتون ٣ كجم", "3 kg case", "sup_dairy", "case", 3, 174, 100, "chilled", 10), // estimated
+  variant("v_ravioli", "it_ravioli", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 105, 100, "frozen", 20), // estimated
+  variant("v_fettuccine", "it_fettuccine", "كيس ١٠ كجم", "10 kg sack", "sup_dry", "sack", 10, 72, 100, "dry", 30), // estimated
+  variant("v_lasagna", "it_lasagna", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 48, 100, "dry", 25), // estimated
+  variant("v_sushirice", "it_sushirice", "كيس ١٠ كجم", "10 kg sack", "sup_dry", "sack", 10, 78, 100, "dry", 15), // estimated
+  variant("v_nori", "it_nori", "كجم", "1 kg", "sup_dry", "kg", 1, 210, 100, "dry", 3), // estimated
+  variant("v_mayo", "it_mayo", "كرتون ١٠ كجم", "10 kg case", "sup_dry", "case", 10, 95, 100, "chilled", 32), // estimated
+  variant("v_pesto", "it_pesto", "كرتون ٣ كجم", "3 kg case", "sup_dry", "case", 3, 132, 100, "chilled", 6), // estimated
+  variant("v_oystersauce", "it_oystersauce", "عبوة ٥ لتر", "5 L jug", "sup_dry", "box", 5, 78, 100, "dry", 9), // estimated
+  variant("v_teriyaki", "it_teriyaki", "عبوة ٥ لتر", "5 L jug", "sup_dry", "box", 5, 85, 100, "dry", 9), // estimated
+  variant("v_prunes", "it_prunes", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 92, 95, "dry", 11), // estimated
+  variant("v_raisin", "it_raisin", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 62, 100, "dry", 13), // estimated
+  variant("v_walnut", "it_walnut", "كجم", "1 kg", "sup_dry", "kg", 1, 58, 100, "dry", 11), // estimated
+  // Sold by the 50 g box, which is why `pack_size` is a fraction of a kilo —
+  // the only item in the catalogue where that happens.
+  variant("v_saffron", "it_saffron", "علبة ٥٠ جم", "50 g box", "sup_dry", "box", 0.05, 475, 100, "dry", 0.15), // estimated
+  variant("v_apple", "it_apple", "كرتون ١٠ كجم", "10 kg case", "sup_produce", "case", 10, 78, 88, "chilled", 28), // estimated
+  variant("v_orange", "it_orange", "كرتون ١٠ كجم", "10 kg case", "sup_produce", "case", 10, 55, 65, "chilled", 26), // estimated
+  variant("v_bellpepper", "it_bellpepper", "صندوق ٥ كجم", "5 kg box", "sup_produce", "box", 5, 38, 82, "chilled", 27), // estimated
+  variant("v_greenbean", "it_greenbean", "كرتون ٥ كجم", "5 kg case", "sup_produce", "case", 5, 42, 88, "frozen", 22), // estimated
   // ── bakery, beverage, disposables ───────────────────────────────
   // Unpriced on purpose — anything built on bread costs light until this is filled in.
   variant("v_bread", "it_bread", "صينية ١٠٠ رغيف", "Tray of 100", "sup_dry", "tray", 100, null, 100, "dry", 800),
@@ -308,6 +373,42 @@ export const SEED_VARIANTS: ItemVariant[] = [
   variant("v_juice", "it_juice", "كرتون ٢٤ حبة", "Case of 24", "sup_dairy", "case", 24, 40, 100, "chilled", 1440), // estimated
   variant("v_mealbox", "it_mealbox", "كرتون ٥٠٠ علبة", "Case of 500", "sup_dry", "case", 500, 240, 100, "dry", 4000), // estimated
 ]
+
+/**
+ * Items deliberately left short of par, because their finding is the point.
+ *
+ * Chicken is the one the item/variant split exists to demonstrate: below par,
+ * and its costing basis comes from the supplier whose certificate has lapsed.
+ */
+const DELIBERATELY_SHORT = new Set(["it_chicken"])
+
+/**
+ * Bring everything else up to par, on its costing basis.
+ *
+ * Hand-written stock levels drifted below par on 32 of the 103 items — a habit
+ * of typing a number slightly under the par I had just written. That produced
+ * 32 `item.below_par` warnings, which is not a seed with a few deliberate
+ * imperfections; it is a wall that buries them. Expressing the intent as a set
+ * beats scattering 32 corrected magic numbers, and it stays true as items are
+ * added.
+ */
+function stockedToPar(variants: ItemVariant[]): ItemVariant[] {
+  const onHand = new Map<string, number>()
+  for (const v of variants) onHand.set(v.item, (onHand.get(v.item) ?? 0) + v.on_hand)
+  return variants.map((v) => {
+    const item = SEED_ITEMS.find((i) => i.id === v.item)
+    if (!item || DELIBERATELY_SHORT.has(item.id)) return v
+    // Only the costing basis is topped up — the alternatives stay at whatever
+    // was actually seeded, which is usually zero.
+    if (item.preferred_variant !== v.id) return v
+    const short = item.par_level - (onHand.get(item.id) ?? 0)
+    // A quarter above par, so ordinary consumption does not instantly re-trip
+    // the warning the moment anyone edits a recipe.
+    return short > 0 ? { ...v, on_hand: v.on_hand + short * 1.25 } : v
+  })
+}
+
+export const SEED_VARIANTS: ItemVariant[] = stockedToPar(RAW_VARIANTS)
 
 /* ── a few real dishes, actually costed ─────────────────────────── */
 
@@ -410,6 +511,80 @@ const COSTED: Record<string, Array<[string, number]>> = {
   // 100 portions per batch, not 50 — the bread section's batch yield.
   "سلة متنوعة من الخبز العربي والإيطالي": [["it_bread", 100], ["it_butter", 0.6]],
   "شلال متنوع من الخبز الإيطالي والفرنسي والعربي الأسمر والأبيض": [["it_bread", 120], ["it_butter", 0.8]],
+
+  /* ── cold appetisers: the seafood and continental range ──────── */
+  "هرم الجمبري وصوص الكوكتيل": [["it_shrimp", 4], ["it_mayo", 0.8], ["it_tomatopaste", 0.3], ["it_lemon", 0.4]],
+  "استكوزا كاسات الكوكتيل": [["it_lobster", 3], ["it_mayo", 0.7], ["it_tomatopaste", 0.25], ["it_lettuce", 0.8], ["it_lemon", 0.3]],
+  سوشي: [["it_sushirice", 2.5], ["it_nori", 0.3], ["it_salmon", 1.2], ["it_cucumber", 0.6], ["it_vinegar", 0.25]],
+  "تيرين سمك": [["it_fish", 3.5], ["it_cream", 0.8], ["it_egg", 8], ["it_gelatin", 0.05], ["it_lemon", 0.3]],
+  "تيرين لحم": [["it_beef", 3.5], ["it_cream", 0.7], ["it_egg", 8], ["it_gelatin", 0.05], ["it_onion", 0.3]],
+  "تيرين دجاج": [["it_chicken", 3.5], ["it_cream", 0.7], ["it_egg", 8], ["it_gelatin", 0.05], ["it_onion", 0.3]],
+  "سلطة الشيف": [["it_lettuce", 2.5], ["it_coldcuts", 1], ["it_cheese", 0.6], ["it_egg", 10], ["it_tomato", 0.8], ["it_cucumber", 0.6]],
+  "سلطة الموزريلا بالطماطم والبيستو": [["it_mozzarella", 1.8], ["it_tomato", 2.5], ["it_pesto", 0.5], ["it_oliveoil", 0.25]],
+  "سلطة دجاج بالجوز": [["it_chicken", 2.5], ["it_walnut", 0.6], ["it_mayo", 0.8], ["it_lettuce", 1], ["it_apple", 0.5]],
+  "سلطة شاورما": [["it_chicken", 2.5], ["it_bread", 15], ["it_lettuce", 1.2], ["it_tomato", 0.8], ["it_mayo", 0.6], ["it_spice", 0.06]],
+  "سلطة نيسوازا": [["it_tuna", 1.5], ["it_potato", 1.5], ["it_greenbean", 1], ["it_egg", 10], ["it_olive", 0.4], ["it_lettuce", 1], ["it_oliveoil", 0.3]],
+  "سلطة هاواي بالتفاح": [["it_apple", 2.5], ["it_cream", 0.8], ["it_walnut", 0.4], ["it_lemon", 0.3], ["it_mayo", 0.4]],
+  "مراية أجبان": [["it_cheesemix", 4], ["it_fruitmix", 1], ["it_nuts", 0.4]],
+  "مرايا لحوم باردة": [["it_coldcuts", 4], ["it_olive", 0.5], ["it_cucumber", 0.4]],
+  "مرايا سالمون وجمبري": [["it_salmon", 2.5], ["it_shrimp", 1.8], ["it_lemon", 0.5], ["it_oliveoil", 0.2]],
+
+  /* ── hot appetisers ──────────────────────────────────────────── */
+  "بيتزا صغيرة": [["it_flour", 2], ["it_mozzarella", 1.5], ["it_tomatopaste", 0.8], ["it_oliveoil", 0.3], ["it_bellpepper", 0.4]],
+  "فطاير بالجبنة": [["it_flour", 2.5], ["it_cheese", 2], ["it_egg", 6], ["it_oliveoil", 0.5]],
+  "فطاير بالخضار": [["it_flour", 2.5], ["it_spinach", 1.2], ["it_bellpepper", 0.6], ["it_onion", 0.6], ["it_oliveoil", 0.5]],
+
+  /* ── mains: rice ─────────────────────────────────────────────── */
+  "ارز كابلي": [["it_rice", 6], ["it_chicken", 6], ["it_onion", 1.2], ["it_tomato", 0.8], ["it_oil", 0.7], ["it_spice", 0.15]],
+  "ارز مديني": [["it_rice", 6], ["it_lamb", 6], ["it_onion", 1.2], ["it_spice", 0.15], ["it_saffron", 0.004], ["it_oil", 0.6]],
+  "رز بخاري باللحم": [["it_rice", 6], ["it_lamb", 6.5], ["it_carrot", 1], ["it_onion", 1], ["it_spice", 0.18], ["it_oil", 0.6], ["it_raisin", 0.2]],
+  "ارز بالمكسرات": [["it_rice", 6.5], ["it_nuts", 1], ["it_raisin", 0.4], ["it_butter", 0.6], ["it_saffron", 0.003]],
+
+  /* ── mains: seafood ──────────────────────────────────────────── */
+  "استكوزا ثيرميدور": [["it_lobster", 8], ["it_cream", 2], ["it_cheese", 1], ["it_butter", 0.6], ["it_mushroom", 1]],
+  "بيلا ثمار البحر": [["it_seafoodmix", 6], ["it_shrimp", 2], ["it_rice", 4.5], ["it_bellpepper", 1], ["it_onion", 0.8], ["it_saffron", 0.004], ["it_oliveoil", 0.5]],
+  "جمبري تمبورا": [["it_shrimp", 8], ["it_flour", 1.5], ["it_egg", 10], ["it_cornflour", 0.5], ["it_oil", 2.2]],
+  "جمبري محشي بالجبنة": [["it_shrimp", 8], ["it_cheese", 1.5], ["it_breadcrumb", 0.6], ["it_butter", 0.5]],
+  "مكرونة بالجمبري": [["it_pasta", 4], ["it_shrimp", 4], ["it_cream", 1.5], ["it_garlic", 0.15], ["it_oliveoil", 0.4]],
+  "سمك بالكريمة": [["it_fish", 9], ["it_cream", 2], ["it_flour", 0.4], ["it_butter", 0.5], ["it_mushroom", 0.8]],
+  "سمك حارا": [["it_fish", 9], ["it_tomato", 1.5], ["it_bellpepper", 0.8], ["it_garlic", 0.2], ["it_spice", 0.15], ["it_oliveoil", 0.6]],
+  "سمك مقلي": [["it_fish", 9.5], ["it_flour", 1], ["it_oil", 2], ["it_lemon", 0.6]],
+  "سمك قاروص محشي": [["it_seabass", 10], ["it_onion", 0.8], ["it_lemon", 0.6], ["it_parsley", 0.3], ["it_oliveoil", 0.6]],
+  "سمك هامور باليمون": [["it_grouper", 9.5], ["it_lemon", 1.2], ["it_garlic", 0.2], ["it_oliveoil", 0.6], ["it_flour", 0.4]],
+  "فيليه سمك الناجل": [["it_grouper", 9.5], ["it_butter", 0.6], ["it_lemon", 0.8], ["it_flour", 0.4]],
+
+  /* ── mains: beef and veal ────────────────────────────────────── */
+  "فيليه لحم العجل": [["it_veal", 9], ["it_butter", 0.7], ["it_cream", 1], ["it_mushroom", 1]],
+  "لحم مداليون": [["it_veal", 9], ["it_butter", 0.7], ["it_cream", 0.8], ["it_spice", 0.1]],
+  "بيف استجرنوف": [["it_beef", 8], ["it_mushroom", 1.5], ["it_cream", 1.5], ["it_onion", 0.8], ["it_flour", 0.3]],
+  "بيف فيبليه": [["it_beef", 8.5], ["it_onion", 0.8], ["it_butter", 0.6], ["it_cream", 0.8]],
+  "ترياكي لحم": [["it_beef", 8], ["it_teriyaki", 1], ["it_onion", 0.6], ["it_oil", 0.4]],
+  "لحم تبنياكي": [["it_beef", 8], ["it_teriyaki", 0.8], ["it_bellpepper", 0.8], ["it_onion", 0.6], ["it_oil", 0.4]],
+  "لحم بصوص المحار": [["it_beef", 8], ["it_oystersauce", 0.8], ["it_bellpepper", 0.8], ["it_garlic", 0.15], ["it_oil", 0.4]],
+  كفتة: [["it_beef", 7], ["it_onion", 1.2], ["it_parsley", 0.4], ["it_spice", 0.15], ["it_oil", 0.4]],
+  "محشي مشكل": [["it_courgette", 3], ["it_bellpepper", 2], ["it_rice", 2], ["it_beef", 2], ["it_tomatopaste", 0.5], ["it_oil", 0.5]],
+
+  /* ── mains: tagine and poultry ───────────────────────────────── */
+  "طاجين بالبرقوق": [["it_lamb", 7], ["it_prunes", 1.2], ["it_onion", 1], ["it_spice", 0.15], ["it_oil", 0.5]],
+  "طاجين دجاج بالزيتون": [["it_chicken", 8], ["it_olive", 1], ["it_lemon", 0.6], ["it_onion", 1], ["it_spice", 0.15], ["it_oliveoil", 0.5]],
+  "دجاج تندوري": [["it_chicken", 9], ["it_yogurt", 1.5], ["it_spice", 0.25], ["it_lemon", 0.4], ["it_garlic", 0.15]],
+  "دجاج بيكاتا": [["it_chicken", 8], ["it_flour", 0.4], ["it_butter", 0.5], ["it_lemon", 0.6], ["it_cream", 0.8]],
+  "دجاج بصوص الفطر": [["it_chicken", 8], ["it_mushroom", 2], ["it_cream", 1.5], ["it_butter", 0.4]],
+  "دجاج رول": [["it_chicken", 8], ["it_cheese", 1], ["it_spinach", 0.8], ["it_breadcrumb", 0.6], ["it_egg", 8]],
+  "دجاج الاكيف": [["it_chicken", 8], ["it_cream", 1.2], ["it_butter", 0.5], ["it_spice", 0.12], ["it_garlic", 0.12]],
+  "ديك رومي": [["it_turkey", 11], ["it_butter", 0.8], ["it_onion", 0.8], ["it_spice", 0.15]],
+  "بط بصوص البرتقال": [["it_duck", 10], ["it_orange", 1.5], ["it_sugar", 0.4], ["it_butter", 0.5]],
+
+  /* ── mains: pasta and gratins ────────────────────────────────── */
+  لازانيا: [["it_lasagna", 2.5], ["it_beef", 3], ["it_milk", 4], ["it_cheese", 1.2], ["it_tomatopaste", 0.8], ["it_flour", 0.4], ["it_butter", 0.5]],
+  "مكرونة لازانيا": [["it_lasagna", 2.5], ["it_beef", 3], ["it_milk", 4], ["it_cheese", 1.2], ["it_tomatopaste", 0.8], ["it_flour", 0.4], ["it_butter", 0.5]],
+  "رافيولي بالجبنة": [["it_ravioli", 4], ["it_cream", 1.5], ["it_cheese", 0.8], ["it_butter", 0.5]],
+  فتتشيني: [["it_fettuccine", 4], ["it_cream", 2], ["it_cheese", 0.8], ["it_butter", 0.5], ["it_mushroom", 0.8]],
+  "باذنجان بالباشاميل": [["it_eggplant", 5], ["it_beef", 2.5], ["it_milk", 4], ["it_flour", 0.5], ["it_butter", 0.5], ["it_cheese", 0.6], ["it_tomatopaste", 0.5]],
+  // The document lists the same gratin under both word orders; both are real
+  // rows on real packages, so both are costed rather than one aliased away.
+  "بطاطس جريتان": [["it_potato", 6], ["it_cream", 2], ["it_cheese", 1], ["it_butter", 0.5], ["it_milk", 1]],
+  "جريتان بطاطس": [["it_potato", 6], ["it_cream", 2], ["it_cheese", 1], ["it_butter", 0.5], ["it_milk", 1]],
 }
 
 let lineSeq = 0

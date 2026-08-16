@@ -207,12 +207,10 @@ export function validateCatalogue(input: ValidationInput): Issue[] {
 
   for (const menu of catalog.menus.values()) {
     const label = N(menu)
-    if (menu.items.length === 0) {
-      // A station is defined by its inclusions, not by dishes, so an empty
-      // item list is only a defect when there is nothing else in the package.
-      if (menu.inclusions.length === 0) {
-        at("error", "menu.no_items", "menu", menu.id, M("قائمة «{name}» بلا أصناف.", { name: label }))
-      }
+    // A station is defined by its inclusions, not by dishes, so an empty item
+    // list is only a defect when there is nothing else in the package.
+    if (menu.items.length === 0 && menu.inclusions.length === 0) {
+      at("error", "menu.no_items", "menu", menu.id, M("قائمة «{name}» بلا أصناف.", { name: label }))
       continue
     }
     const uncosted = menu.items.filter((i) => catalog.recipes.get(i.recipe)?.draft).length

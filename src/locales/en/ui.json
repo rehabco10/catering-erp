@@ -30,11 +30,6 @@
     "dinner": "Dinner",
     "snack": "Snack"
   },
-  "tier": {
-    "economy": "Economy",
-    "standard": "Standard",
-    "premium": "Premium"
-  },
   "station": {
     "hot": "Hot kitchen",
     "cold": "Cold kitchen",
@@ -124,7 +119,14 @@
     "par_hint": "Par for the whole item, summed across every option.",
     "preferred": "Costing basis",
     "cheapest": "Cheapest",
-    "no_basis": "No costing basis"
+    "no_basis": "No costing basis",
+    "service_line": "Service line",
+    "level": "Package no.",
+    "level_hint": "1–4 for numbered packages; leave blank otherwise.",
+    "course": "Section",
+    "meal": "Meal period",
+    "draft": "Draft",
+    "uncosted": "Uncosted"
   },
   "policy": {
     "target_food_cost_pct": "Target food cost",
@@ -154,7 +156,8 @@
     "inventory": "Select an item to see its purchase options and cost.",
     "no_results": "No matches.",
     "build": "Nothing in the build yet.",
-    "composition": "No dishes yet."
+    "composition": "No dishes yet.",
+    "inclusions": "No inclusions listed."
   },
   "inventory": {
     "reorder": "Below par"
@@ -172,7 +175,8 @@
     "composition": "Composition",
     "pricing": "Pricing",
     "first_variant": "First purchase option",
-    "variants": "Purchase options"
+    "variants": "Purchase options",
+    "inclusions": "Included services & equipment"
   },
   "group": {
     "sub_recipes": "Sub-recipes",
@@ -190,7 +194,10 @@
     "dish_count": "{n, plural, =0 {no dishes} one {# dish} other {# dishes}}",
     "fit_view": "Fit",
     "unpin_all": "Unpin",
-    "pinned_hint": "Placed by hand — double-click to hand it back to the auto-layout."
+    "pinned_hint": "Placed by hand — double-click to hand it back to the auto-layout.",
+    "package_count": "{n, plural, =0 {no packages} one {# package} other {# packages}}",
+    "expand": "Show dishes",
+    "collapse": "Hide"
   },
   "packunit": {
     "kg": "kg",
@@ -200,5 +207,21 @@
     "case": "case",
     "sack": "sack",
     "tray": "tray"
+  },
+  "course": {
+    "cold_appetiser": "Cold appetisers",
+    "hot_appetiser": "Hot appetisers",
+    "main": "Main dishes",
+    "dessert": "Desserts",
+    "bread": "Bread",
+    "beverage": "Beverages",
+    "packaging": "Packaging"
+  },
+  "line": {
+    "buffet": "Buffet",
+    "traditional": "Traditional",
+    "frozen": "Pre-prepared",
+    "dry": "Dry meals",
+    "station": "Station"
   }
 }

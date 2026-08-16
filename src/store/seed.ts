@@ -1,22 +1,38 @@
-import type { Item, ItemVariant, Menu, Policy, Recipe, Supplier } from "@/engine/schemas"
+import type { Item, ItemVariant, Policy, Recipe, RecipeLine, Supplier } from "@/engine/schemas"
+import { DOC_MENUS, DOC_RECIPES } from "./seed-packages"
 
 /**
- * A worked catalogue, as the starting draft.
+ * The starting draft: a real raw-material catalogue under the real packages.
  *
- * Shaped after Hajj mass feeding rather than a wedding book: large-batch
- * dishes, thin margins, and suppliers whose certification actually matters.
+ * ── Where the numbers come from ──────────────────────────────────────
+ * **Prices** are anchored to published Saudi figures for 2025 and then taken
+ * down ~15% to a catering wholesale level — a kitchen buying 20 kg sacks does
+ * not pay shelf price. Each variant is marked `sourced` or `estimated` in a
+ * trailing comment; the sourced anchors are:
  *
- * Several rows are deliberately imperfect, so the checks page has real
- * findings on first run rather than an empty state that proves nothing:
- *   · chicken sits below its par level, and its preferred purchase variant
- *     comes from a supplier whose halal certificate has lapsed — with a
- *     certified frozen variant on file beside it
- *   · Arabic bread carries no purchase price → the breakfast menu costs light
+ *   rice     GASTAT: basmati white Indian, 96.70 SAR / 10 kg (Nov 2025)
+ *   flour    GASTAT: local white wheat flour, 4.63 SAR / 2 kg
+ *   sugar    GASTAT: soft sugar, 40.05 SAR / 10 kg
+ *   chicken  Saudi retail 2025: fresh chicken 16.50–17.75 SAR/kg
+ *   lamb     Saudi retail 2025: minced lamb 34.95 SAR/kg
+ *   tomato   Saudi retail 2025: local tomato ~1.90 SAR/kg on offer, 4–6 typical
+ *
+ * Everything else is a plausible market value standing in until real supplier
+ * quotes arrive, and is marked as such.
+ *
+ * **Suppliers are fabricated.** Names, certificate numbers and lead times are
+ * invented; only their shape is real. Nothing here is a commercial record.
+ *
+ * **Yields** are standard trim and cooking-loss figures from the costing
+ * literature (`docs/catering-engine.md` §1), not measured in this kitchen.
+ *
+ * ── What is deliberately imperfect ───────────────────────────────────
+ * So the checks page has real findings on first run:
+ *   · chicken sits below par, and its costing basis comes from a supplier
+ *     whose halal certificate has lapsed — with a certified frozen variant on
+ *     file beside it
+ *   · Arabic bread carries no purchase price
  *   · tomato is bought as boxes when the crate is cheaper per kilo
- *   · the premium lunch runs ~41% food cost against a 30% target
- *
- * The one date in here — the supplier certificate expiry — is generated
- * relative to today, so the lapsed-certificate finding never goes stale.
  */
 
 const DAY = 86_400_000
@@ -33,273 +49,225 @@ export const SEED_POLICY: Policy = {
   vat_pct: 15,
 }
 
-/* ── suppliers ──────────────────────────────────────────────────── */
+/* ── suppliers (fabricated) ─────────────────────────────────────── */
 
 export const SEED_SUPPLIERS: Supplier[] = [
-  {
-    id: "sup_meat",
-    name_ar: "الشركة الوطنية للحوم",
-    name_en: "National Meat Company",
-    categories: ["protein"],
-    lead_time_days: 3,
-    halal_cert_no: "SFDA-HL-22914",
-    halal_cert_expiry: day(210),
-  },
-  {
-    id: "sup_poultry",
-    name_ar: "دواجن الطائف",
-    name_en: "Taif Poultry",
-    categories: ["protein"],
-    lead_time_days: 2,
-    halal_cert_no: "SFDA-HL-17330",
-    // Lapsed. Every meat line traced to this supplier is a blocking finding.
-    halal_cert_expiry: day(-11),
-  },
-  {
-    id: "sup_produce",
-    name_ar: "خضار الحرمين",
-    name_en: "Haramain Produce",
-    categories: ["produce"],
-    lead_time_days: 1,
-    halal_cert_no: null,
-    halal_cert_expiry: null,
-  },
-  {
-    id: "sup_dry",
-    name_ar: "مؤسسة المؤن للتموين",
-    name_en: "Al-Moun Provisions",
-    categories: ["dry_goods", "bakery", "disposable"],
-    lead_time_days: 5,
-    halal_cert_no: null,
-    halal_cert_expiry: null,
-  },
-  {
-    id: "sup_dairy",
-    name_ar: "ألبان الوادي",
-    name_en: "Wadi Dairy",
-    categories: ["dairy", "beverage"],
-    lead_time_days: 2,
-    halal_cert_no: null,
-    halal_cert_expiry: null,
-  },
+  { id: "sup_meat", name_ar: "الشركة الوطنية للحوم", name_en: "National Meat Company", categories: ["protein"], lead_time_days: 3, halal_cert_no: "SFDA-HL-22914", halal_cert_expiry: day(210) },
+  // Lapsed. Every meat variant traced to this supplier is a blocking finding.
+  { id: "sup_poultry", name_ar: "دواجن الطائف", name_en: "Taif Poultry", categories: ["protein"], lead_time_days: 2, halal_cert_no: "SFDA-HL-17330", halal_cert_expiry: day(-11) },
+  { id: "sup_sea", name_ar: "أسماك البحر الأحمر", name_en: "Red Sea Seafood", categories: ["protein"], lead_time_days: 2, halal_cert_no: null, halal_cert_expiry: null },
+  { id: "sup_produce", name_ar: "خضار الحرمين", name_en: "Haramain Produce", categories: ["produce"], lead_time_days: 1, halal_cert_no: null, halal_cert_expiry: null },
+  { id: "sup_dry", name_ar: "مؤسسة المؤن للتموين", name_en: "Al-Moun Provisions", categories: ["dry_goods", "bakery", "disposable"], lead_time_days: 5, halal_cert_no: null, halal_cert_expiry: null },
+  { id: "sup_dairy", name_ar: "ألبان الوادي", name_en: "Wadi Dairy", categories: ["dairy", "beverage"], lead_time_days: 2, halal_cert_no: null, halal_cert_expiry: null },
 ]
 
 /* ── items ──────────────────────────────────────────────────────── */
 
-/**
- * What recipes call for. Purchasing lives on the variants below.
- *
- * `preferred_variant` names the costing basis; the ids are stable strings
- * declared alongside the variants so the two lists cannot drift apart.
- */
+const item = (
+  id: string,
+  name_ar: string,
+  name_en: string,
+  category: Item["category"],
+  base_unit: Item["base_unit"],
+  par_level: number,
+  preferred_variant: string,
+  extra: Partial<Item> = {},
+): Item => ({
+  id,
+  name_ar,
+  name_en,
+  category,
+  base_unit,
+  allergens: [],
+  halal_critical: false,
+  par_level,
+  preferred_variant,
+  ...extra,
+})
+
 export const SEED_ITEMS: Item[] = [
-  { id: "it_rice", name_ar: "أرز بسمتي", name_en: "Basmati rice", category: "dry_goods", base_unit: "kg", allergens: [], halal_critical: false, par_level: 200, preferred_variant: "v_rice_moun" },
-  { id: "it_chicken", name_ar: "دجاج", name_en: "Chicken", category: "protein", base_unit: "kg", allergens: [], halal_critical: true, par_level: 150, preferred_variant: "v_chicken_fresh" },
-  { id: "it_lamb", name_ar: "لحم ضأن", name_en: "Lamb shoulder", category: "protein", base_unit: "kg", allergens: [], halal_critical: true, par_level: 120, preferred_variant: "v_lamb_frozen" },
-  { id: "it_onion", name_ar: "بصل", name_en: "Onion", category: "produce", base_unit: "kg", allergens: [], halal_critical: false, par_level: 60, preferred_variant: "v_onion" },
-  { id: "it_tomato", name_ar: "طماطم", name_en: "Tomato", category: "produce", base_unit: "kg", allergens: [], halal_critical: false, par_level: 80, preferred_variant: "v_tomato_box" },
-  { id: "it_cucumber", name_ar: "خيار", name_en: "Cucumber", category: "produce", base_unit: "kg", allergens: [], halal_critical: false, par_level: 60, preferred_variant: "v_cucumber" },
-  { id: "it_yogurt", name_ar: "لبن زبادي", name_en: "Yoghurt", category: "dairy", base_unit: "l", allergens: ["dairy"], halal_critical: false, par_level: 180, preferred_variant: "v_yogurt" },
-  { id: "it_oil", name_ar: "زيت نباتي", name_en: "Vegetable oil", category: "dry_goods", base_unit: "l", allergens: [], halal_critical: false, par_level: 64, preferred_variant: "v_oil" },
-  { id: "it_spice", name_ar: "بهارات مشكّلة", name_en: "Mixed spices", category: "dry_goods", base_unit: "kg", allergens: [], halal_critical: false, par_level: 12, preferred_variant: "v_spice" },
-  { id: "it_cardamom", name_ar: "هيل", name_en: "Cardamom", category: "dry_goods", base_unit: "kg", allergens: [], halal_critical: false, par_level: 4, preferred_variant: "v_cardamom" },
-  { id: "it_dates", name_ar: "تمر", name_en: "Dates", category: "dry_goods", base_unit: "kg", allergens: [], halal_critical: false, par_level: 100, preferred_variant: "v_dates" },
-  { id: "it_bread", name_ar: "خبز عربي", name_en: "Arabic bread", category: "bakery", base_unit: "ea", allergens: ["gluten"], halal_critical: false, par_level: 1200, preferred_variant: "v_bread" },
-  { id: "it_tahini", name_ar: "طحينة", name_en: "Tahini", category: "dry_goods", base_unit: "kg", allergens: ["sesame"], halal_critical: false, par_level: 20, preferred_variant: "v_tahini" },
-  { id: "it_water", name_ar: "مياه ٢٠٠ مل", name_en: "Water 200ml", category: "beverage", base_unit: "ea", allergens: [], halal_critical: false, par_level: 4800, preferred_variant: "v_water" },
-  { id: "it_juice", name_ar: "عصير", name_en: "Juice box", category: "beverage", base_unit: "ea", allergens: [], halal_critical: false, par_level: 960, preferred_variant: "v_juice" },
-  { id: "it_mealbox", name_ar: "علبة وجبة", name_en: "Meal box", category: "disposable", base_unit: "ea", allergens: [], halal_critical: false, par_level: 3000, preferred_variant: "v_mealbox" },
+  // proteins
+  item("it_chicken", "دجاج", "Chicken", "protein", "kg", 150, "v_chicken_fresh", { halal_critical: true }),
+  item("it_lamb", "لحم ضأن", "Lamb", "protein", "kg", 120, "v_lamb_frozen", { halal_critical: true }),
+  item("it_beef", "لحم بقر", "Beef", "protein", "kg", 80, "v_beef", { halal_critical: true }),
+  item("it_shrimp", "جمبري", "Shrimp", "protein", "kg", 30, "v_shrimp", { allergens: ["shellfish"] }),
+  item("it_fish", "فيليه سمك", "Fish fillet", "protein", "kg", 40, "v_fish", { allergens: ["fish"] }),
+  item("it_egg", "بيض", "Eggs", "protein", "ea", 900, "v_egg", { allergens: ["egg"] }),
+  // produce
+  item("it_tomato", "طماطم", "Tomato", "produce", "kg", 80, "v_tomato_box"),
+  item("it_onion", "بصل", "Onion", "produce", "kg", 60, "v_onion"),
+  item("it_cucumber", "خيار", "Cucumber", "produce", "kg", 60, "v_cucumber"),
+  item("it_lettuce", "خس", "Lettuce", "produce", "kg", 30, "v_lettuce"),
+  item("it_parsley", "بقدونس", "Parsley", "produce", "kg", 15, "v_parsley"),
+  item("it_lemon", "ليمون", "Lemon", "produce", "kg", 25, "v_lemon"),
+  item("it_eggplant", "باذنجان", "Aubergine", "produce", "kg", 30, "v_eggplant"),
+  item("it_potato", "بطاطس", "Potato", "produce", "kg", 90, "v_potato"),
+  item("it_garlic", "ثوم", "Garlic", "produce", "kg", 10, "v_garlic"),
+  item("it_mushroom", "فطر", "Mushroom", "produce", "kg", 15, "v_mushroom"),
+  // dairy
+  item("it_yogurt", "لبن زبادي", "Yoghurt", "dairy", "l", 180, "v_yogurt", { allergens: ["dairy"] }),
+  item("it_cream", "كريمة طبخ", "Cooking cream", "dairy", "l", 60, "v_cream", { allergens: ["dairy"] }),
+  item("it_cheese", "جبن", "Cheese", "dairy", "kg", 40, "v_cheese", { allergens: ["dairy"] }),
+  item("it_butter", "زبدة", "Butter", "dairy", "kg", 25, "v_butter", { allergens: ["dairy"] }),
+  // dry goods
+  item("it_rice", "أرز بسمتي", "Basmati rice", "dry_goods", "kg", 200, "v_rice_moun"),
+  item("it_flour", "دقيق", "Wheat flour", "dry_goods", "kg", 150, "v_flour", { allergens: ["gluten"] }),
+  item("it_sugar", "سكر", "Sugar", "dry_goods", "kg", 120, "v_sugar"),
+  item("it_burghul", "برغل", "Bulgur", "dry_goods", "kg", 40, "v_burghul", { allergens: ["gluten"] }),
+  item("it_chickpea", "حمص جاف", "Dry chickpeas", "dry_goods", "kg", 60, "v_chickpea"),
+  item("it_tahini", "طحينة", "Tahini", "dry_goods", "kg", 20, "v_tahini", { allergens: ["sesame"] }),
+  item("it_oil", "زيت نباتي", "Vegetable oil", "dry_goods", "l", 64, "v_oil"),
+  item("it_spice", "بهارات مشكّلة", "Mixed spices", "dry_goods", "kg", 12, "v_spice"),
+  item("it_cardamom", "هيل", "Cardamom", "dry_goods", "kg", 4, "v_cardamom"),
+  item("it_dates", "تمر", "Dates", "dry_goods", "kg", 100, "v_dates"),
+  item("it_nuts", "مكسرات", "Mixed nuts", "dry_goods", "kg", 20, "v_nuts", { allergens: ["nuts"] }),
+  // bakery, beverage, disposables
+  item("it_bread", "خبز عربي", "Arabic bread", "bakery", "ea", 1200, "v_bread", { allergens: ["gluten"] }),
+  item("it_water", "مياه ٢٠٠ مل", "Water 200ml", "beverage", "ea", 4800, "v_water"),
+  item("it_juice", "عصير", "Juice", "beverage", "ea", 960, "v_juice"),
+  item("it_mealbox", "علبة وجبة", "Meal box", "disposable", "ea", 3000, "v_mealbox"),
 ]
 
 /* ── purchase variants ──────────────────────────────────────────── */
 
+const variant = (
+  id: string,
+  itemId: string,
+  name_ar: string,
+  name_en: string,
+  supplier: string | null,
+  pack_unit: ItemVariant["pack_unit"],
+  pack_size: number,
+  ap_cost_sar: number | null,
+  yield_pct: number,
+  storage: ItemVariant["storage"],
+  on_hand: number,
+): ItemVariant => ({
+  id,
+  item: itemId,
+  name_ar,
+  name_en,
+  supplier,
+  supplier_ref: null,
+  pack_unit,
+  pack_size,
+  ap_cost_sar,
+  yield_pct,
+  storage,
+  on_hand,
+})
+
 /**
- * How each item is actually bought.
+ * Four items carry a second variant, each one there to make the model
+ * demonstrate itself rather than to pad the list:
  *
- * Most items have one variant, because most of them genuinely do. Four carry a
- * second, and each of those exists to make the model demonstrate itself rather
- * than to pad the list:
- *
- *   · **rice** — the healthy case. Two suppliers, and the preferred one is
+ *   · **rice** — the healthy case: two suppliers, and the costing basis is
  *     already the cheaper per kilo, so nothing is flagged.
- *   · **chicken** — the point of the whole refactor. The preferred variant is
- *     fresh, from a supplier whose halal certificate has lapsed; a frozen
- *     variant from a certified supplier sits beside it. The blocking finding
- *     now has a fix that is one choice of costing basis away, rather than an
- *     edit that silently re-prices every recipe.
- *   · **lamb** — fresh and frozen at different yields, so two variants of one
- *     item visibly cost different amounts per usable kilo.
- *   · **tomato** — the preferred variant is the dearer one, which trips
+ *   · **chicken** — the argument for the whole item/variant split. The basis
+ *     is fresh, from the supplier whose halal certificate has lapsed; a
+ *     certified frozen variant sits beside it, so the blocking finding has a
+ *     fix one radio button away.
+ *   · **lamb** — fresh and frozen at different yields, so two ways of buying
+ *     one item visibly cost different amounts per usable kilo.
+ *   · **tomato** — the basis is the dearer of the two, which trips
  *     `item.cheaper_variant_available`.
  */
 export const SEED_VARIANTS: ItemVariant[] = [
-  // rice — preferred is also the cheapest per kg (4.80 vs 5.20)
-  { id: "v_rice_moun", item: "it_rice", name_ar: "كيس ٢٠ كجم", name_en: "20 kg sack", supplier: "sup_dry", supplier_ref: "AM-RIC-20", pack_unit: "sack", pack_size: 20, ap_cost_sar: 96, yield_pct: 100, storage: "dry", on_hand: 420 },
-  { id: "v_rice_haramain", item: "it_rice", name_ar: "كيس ١٠ كجم", name_en: "10 kg bag", supplier: "sup_produce", supplier_ref: null, pack_unit: "sack", pack_size: 10, ap_cost_sar: 52, yield_pct: 100, storage: "dry", on_hand: 0 },
-
-  // chicken — preferred is fresh, whose supplier's certificate has lapsed
-  { id: "v_chicken_fresh", item: "it_chicken", name_ar: "طازج — كرتون ١٠ كجم", name_en: "Fresh — 10 kg case", supplier: "sup_poultry", supplier_ref: "TP-FR-10", pack_unit: "case", pack_size: 10, ap_cost_sar: 185, yield_pct: 72, storage: "chilled", on_hand: 90 },
-  { id: "v_chicken_frozen", item: "it_chicken", name_ar: "مجمّد — كرتون ١٢ كجم", name_en: "Frozen — 12 kg case", supplier: "sup_meat", supplier_ref: "NM-FZ-12", pack_unit: "case", pack_size: 12, ap_cost_sar: 210, yield_pct: 74, storage: "frozen", on_hand: 0 },
-
-  // lamb — same item, two forms, different trim
-  { id: "v_lamb_frozen", item: "it_lamb", name_ar: "مجمّد — كرتون ١٢ كجم", name_en: "Frozen — 12 kg case", supplier: "sup_meat", supplier_ref: "NM-LMB-12", pack_unit: "case", pack_size: 12, ap_cost_sar: 660, yield_pct: 68, storage: "frozen", on_hand: 180 },
-  { id: "v_lamb_fresh", item: "it_lamb", name_ar: "طازج — كرتون ١٠ كجم", name_en: "Fresh — 10 kg case", supplier: "sup_meat", supplier_ref: "NM-LMB-10", pack_unit: "case", pack_size: 10, ap_cost_sar: 590, yield_pct: 74, storage: "chilled", on_hand: 0 },
-
-  { id: "v_onion", item: "it_onion", name_ar: "كيس ١٠ كجم", name_en: "10 kg sack", supplier: "sup_produce", supplier_ref: null, pack_unit: "sack", pack_size: 10, ap_cost_sar: 28, yield_pct: 85, storage: "dry", on_hand: 140 },
-
-  // tomato — preferred (5.00/kg) is dearer than the crate (4.60/kg)
-  { id: "v_tomato_box", item: "it_tomato", name_ar: "صندوق ٦ كجم", name_en: "6 kg box", supplier: "sup_produce", supplier_ref: null, pack_unit: "box", pack_size: 6, ap_cost_sar: 30, yield_pct: 92, storage: "chilled", on_hand: 96 },
-  { id: "v_tomato_crate", item: "it_tomato", name_ar: "قفص ١٥ كجم", name_en: "15 kg crate", supplier: "sup_produce", supplier_ref: null, pack_unit: "box", pack_size: 15, ap_cost_sar: 69, yield_pct: 92, storage: "chilled", on_hand: 0 },
-
-  { id: "v_cucumber", item: "it_cucumber", name_ar: "صندوق ٦ كجم", name_en: "6 kg box", supplier: "sup_produce", supplier_ref: null, pack_unit: "box", pack_size: 6, ap_cost_sar: 26, yield_pct: 94, storage: "chilled", on_hand: 72 },
-  { id: "v_yogurt", item: "it_yogurt", name_ar: "كرتون ١٢ لتر", name_en: "12 L case", supplier: "sup_dairy", supplier_ref: null, pack_unit: "case", pack_size: 12, ap_cost_sar: 66, yield_pct: 100, storage: "chilled", on_hand: 240 },
-  { id: "v_oil", item: "it_oil", name_ar: "صندوق ١٦ لتر", name_en: "16 L box", supplier: "sup_dry", supplier_ref: null, pack_unit: "box", pack_size: 16, ap_cost_sar: 108, yield_pct: 100, storage: "dry", on_hand: 128 },
-  { id: "v_spice", item: "it_spice", name_ar: "كجم", name_en: "1 kg", supplier: "sup_dry", supplier_ref: null, pack_unit: "kg", pack_size: 1, ap_cost_sar: 45, yield_pct: 100, storage: "dry", on_hand: 24 },
-  { id: "v_cardamom", item: "it_cardamom", name_ar: "كجم", name_en: "1 kg", supplier: "sup_dry", supplier_ref: null, pack_unit: "kg", pack_size: 1, ap_cost_sar: 180, yield_pct: 100, storage: "dry", on_hand: 8 },
-  { id: "v_dates", item: "it_dates", name_ar: "صندوق ٥ كجم", name_en: "5 kg box", supplier: "sup_dry", supplier_ref: null, pack_unit: "box", pack_size: 5, ap_cost_sar: 90, yield_pct: 96, storage: "dry", on_hand: 150 },
-  // Unpriced on purpose: the breakfast menu costs light until this is filled in.
-  { id: "v_bread", item: "it_bread", name_ar: "صينية ١٠٠ رغيف", name_en: "Tray of 100", supplier: "sup_dry", supplier_ref: null, pack_unit: "tray", pack_size: 100, ap_cost_sar: null, yield_pct: 100, storage: "dry", on_hand: 800 },
-  { id: "v_tahini", item: "it_tahini", name_ar: "صندوق ٥ كجم", name_en: "5 kg box", supplier: "sup_dry", supplier_ref: null, pack_unit: "box", pack_size: 5, ap_cost_sar: 85, yield_pct: 100, storage: "dry", on_hand: 30 },
-  { id: "v_water", item: "it_water", name_ar: "كرتون ٤٨ حبة", name_en: "Case of 48", supplier: "sup_dairy", supplier_ref: null, pack_unit: "case", pack_size: 48, ap_cost_sar: 12, yield_pct: 100, storage: "dry", on_hand: 9600 },
-  { id: "v_juice", item: "it_juice", name_ar: "كرتون ٢٤ حبة", name_en: "Case of 24", supplier: "sup_dairy", supplier_ref: null, pack_unit: "case", pack_size: 24, ap_cost_sar: 42, yield_pct: 100, storage: "chilled", on_hand: 1440 },
-  { id: "v_mealbox", item: "it_mealbox", name_ar: "كرتون ٥٠٠ علبة", name_en: "Case of 500", supplier: "sup_dry", supplier_ref: null, pack_unit: "case", pack_size: 500, ap_cost_sar: 250, yield_pct: 100, storage: "dry", on_hand: 4000 },
+  // ── proteins ────────────────────────────────────────────────────
+  variant("v_chicken_fresh", "it_chicken", "طازج — كرتون ١٠ كجم", "Fresh — 10 kg case", "sup_poultry", "case", 10, 155, 72, "chilled", 90), // sourced 15.50/kg
+  variant("v_chicken_frozen", "it_chicken", "مجمّد — كرتون ١٢ كجم", "Frozen — 12 kg case", "sup_meat", "case", 12, 174, 74, "frozen", 0), // sourced 14.50/kg
+  variant("v_lamb_frozen", "it_lamb", "مجمّد — كرتون ١٢ كجم", "Frozen — 12 kg case", "sup_meat", "case", 12, 390, 68, "frozen", 180), // sourced 32.50/kg
+  variant("v_lamb_fresh", "it_lamb", "طازج — كرتون ١٠ كجم", "Fresh — 10 kg case", "sup_meat", "case", 10, 355, 74, "chilled", 0), // sourced 35.50/kg
+  variant("v_beef", "it_beef", "كرتون ١٠ كجم", "10 kg case", "sup_meat", "case", 10, 320, 78, "frozen", 60), // estimated
+  variant("v_shrimp", "it_shrimp", "كرتون ٥ كجم", "5 kg case", "sup_sea", "case", 5, 225, 65, "frozen", 20), // estimated
+  variant("v_fish", "it_fish", "كرتون ٥ كجم", "5 kg case", "sup_sea", "case", 5, 190, 82, "frozen", 30), // estimated
+  variant("v_egg", "it_egg", "طبق ٣٠ حبة", "Tray of 30", "sup_dairy", "tray", 30, 14, 88, "chilled", 600), // estimated
+  // ── produce ─────────────────────────────────────────────────────
+  variant("v_tomato_box", "it_tomato", "صندوق ٦ كجم", "6 kg box", "sup_produce", "box", 6, 26, 92, "chilled", 96), // sourced 4.33/kg
+  variant("v_tomato_crate", "it_tomato", "قفص ١٥ كجم", "15 kg crate", "sup_produce", "box", 15, 60, 92, "chilled", 0), // sourced 4.00/kg
+  variant("v_onion", "it_onion", "كيس ١٠ كجم", "10 kg sack", "sup_produce", "sack", 10, 32, 85, "dry", 140), // estimated
+  variant("v_cucumber", "it_cucumber", "صندوق ٦ كجم", "6 kg box", "sup_produce", "box", 6, 24, 94, "chilled", 72), // estimated
+  variant("v_lettuce", "it_lettuce", "صندوق ٥ كجم", "5 kg box", "sup_produce", "box", 5, 22, 70, "chilled", 25), // estimated
+  variant("v_parsley", "it_parsley", "ربطة ١ كجم", "1 kg bunch", "sup_produce", "kg", 1, 9, 60, "chilled", 12), // estimated
+  variant("v_lemon", "it_lemon", "صندوق ٥ كجم", "5 kg box", "sup_produce", "box", 5, 22, 45, "chilled", 20), // estimated
+  variant("v_eggplant", "it_eggplant", "صندوق ٦ كجم", "6 kg box", "sup_produce", "box", 6, 22, 82, "chilled", 28), // estimated
+  variant("v_potato", "it_potato", "كيس ١٠ كجم", "10 kg sack", "sup_produce", "sack", 10, 30, 81, "dry", 100), // estimated
+  variant("v_garlic", "it_garlic", "كيس ٥ كجم", "5 kg sack", "sup_produce", "sack", 5, 55, 88, "dry", 8), // estimated
+  variant("v_mushroom", "it_mushroom", "صندوق ٣ كجم", "3 kg box", "sup_produce", "box", 3, 42, 95, "chilled", 12), // estimated
+  // ── dairy ───────────────────────────────────────────────────────
+  variant("v_yogurt", "it_yogurt", "كرتون ١٢ لتر", "12 L case", "sup_dairy", "case", 12, 62, 100, "chilled", 240), // estimated
+  variant("v_cream", "it_cream", "كرتون ١٢ لتر", "12 L case", "sup_dairy", "case", 12, 96, 100, "chilled", 48), // estimated
+  variant("v_cheese", "it_cheese", "كرتون ٦ كجم", "6 kg case", "sup_dairy", "case", 6, 138, 100, "chilled", 30), // estimated
+  variant("v_butter", "it_butter", "كرتون ٥ كجم", "5 kg case", "sup_dairy", "case", 5, 145, 100, "chilled", 20), // estimated
+  // ── dry goods ───────────────────────────────────────────────────
+  variant("v_rice_moun", "it_rice", "كيس ٢٠ كجم", "20 kg sack", "sup_dry", "sack", 20, 165, 100, "dry", 420), // sourced 8.25/kg
+  variant("v_rice_alt", "it_rice", "كيس ١٠ كجم", "10 kg sack", "sup_produce", "sack", 10, 88, 100, "dry", 0), // sourced 8.80/kg
+  variant("v_flour", "it_flour", "كيس ٢٥ كجم", "25 kg sack", "sup_dry", "sack", 25, 49, 100, "dry", 175), // sourced 1.96/kg
+  variant("v_sugar", "it_sugar", "كيس ٢٥ كجم", "25 kg sack", "sup_dry", "sack", 25, 85, 100, "dry", 130), // sourced 3.40/kg
+  variant("v_burghul", "it_burghul", "كيس ١٠ كجم", "10 kg sack", "sup_dry", "sack", 10, 48, 100, "dry", 45), // estimated
+  variant("v_chickpea", "it_chickpea", "كيس ٢٥ كجم", "25 kg sack", "sup_dry", "sack", 25, 155, 100, "dry", 70), // estimated
+  variant("v_tahini", "it_tahini", "صندوق ٥ كجم", "5 kg box", "sup_dry", "box", 5, 78, 100, "dry", 22), // estimated
+  variant("v_oil", "it_oil", "صندوق ١٦ لتر", "16 L box", "sup_dry", "box", 16, 128, 100, "dry", 128), // estimated
+  variant("v_spice", "it_spice", "كجم", "1 kg", "sup_dry", "kg", 1, 42, 100, "dry", 24), // estimated
+  variant("v_cardamom", "it_cardamom", "كجم", "1 kg", "sup_dry", "kg", 1, 175, 100, "dry", 8), // estimated
+  variant("v_dates", "it_dates", "صندوق ٥ كجم", "5 kg box", "sup_dry", "box", 5, 85, 96, "dry", 150), // estimated
+  variant("v_nuts", "it_nuts", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 210, 100, "dry", 18), // estimated
+  // ── bakery, beverage, disposables ───────────────────────────────
+  // Unpriced on purpose — anything built on bread costs light until this is filled in.
+  variant("v_bread", "it_bread", "صينية ١٠٠ رغيف", "Tray of 100", "sup_dry", "tray", 100, null, 100, "dry", 800),
+  variant("v_water", "it_water", "كرتون ٤٨ حبة", "Case of 48", "sup_dairy", "case", 48, 11, 100, "dry", 9600), // estimated
+  variant("v_juice", "it_juice", "كرتون ٢٤ حبة", "Case of 24", "sup_dairy", "case", 24, 40, 100, "chilled", 1440), // estimated
+  variant("v_mealbox", "it_mealbox", "كرتون ٥٠٠ علبة", "Case of 500", "sup_dry", "case", 500, 240, 100, "dry", 4000), // estimated
 ]
 
-/* ── recipes ────────────────────────────────────────────────────── */
+/* ── a few real dishes, actually costed ─────────────────────────── */
 
-export const SEED_RECIPES: Recipe[] = [
-  {
-    // A sub-recipe: nothing serves it on its own, but three dishes pull it in,
-    // and the cardamom in it has to reach the purchase list.
-    id: "rec_spicemix", name_ar: "خلطة البهارات", name_en: "House spice mix",
-    station: "assembly", service_temp: "ambient",
-    yield_portions: 200, portion_size_g: 6, prep_minutes: 25, shelf_life_hours: 2160,
-    lines: [
-      { id: "rl_sm1", kind: "item", ref: "it_spice", qty: 0.9 },
-      { id: "rl_sm2", kind: "item", ref: "it_cardamom", qty: 0.12 },
-    ],
-  },
-  {
-    id: "rec_kabsa", name_ar: "كبسة دجاج", name_en: "Chicken kabsa",
-    station: "hot", service_temp: "hot",
-    yield_portions: 40, portion_size_g: 450, prep_minutes: 95, shelf_life_hours: 4,
-    lines: [
-      { id: "rl_k1", kind: "item", ref: "it_rice", qty: 6 },
-      { id: "rl_k2", kind: "item", ref: "it_chicken", qty: 9 },
-      { id: "rl_k3", kind: "item", ref: "it_onion", qty: 1.5 },
-      { id: "rl_k4", kind: "item", ref: "it_tomato", qty: 1.2 },
-      { id: "rl_k5", kind: "item", ref: "it_oil", qty: 0.8 },
-      { id: "rl_k6", kind: "recipe", ref: "rec_spicemix", qty: 40 },
-    ],
-  },
-  {
-    id: "rec_mandi", name_ar: "مندي لحم", name_en: "Lamb mandi",
-    station: "hot", service_temp: "hot",
-    yield_portions: 30, portion_size_g: 500, prep_minutes: 140, shelf_life_hours: 4,
-    lines: [
-      { id: "rl_m1", kind: "item", ref: "it_lamb", qty: 11 },
-      { id: "rl_m2", kind: "item", ref: "it_rice", qty: 5 },
-      { id: "rl_m3", kind: "item", ref: "it_oil", qty: 0.6 },
-      { id: "rl_m4", kind: "recipe", ref: "rec_spicemix", qty: 30 },
-    ],
-  },
-  {
-    id: "rec_salad", name_ar: "سلطة عربية", name_en: "Arabic salad",
-    station: "cold", service_temp: "cold",
-    yield_portions: 50, portion_size_g: 120, prep_minutes: 45, shelf_life_hours: 8,
-    lines: [
-      { id: "rl_s1", kind: "item", ref: "it_tomato", qty: 3 },
-      { id: "rl_s2", kind: "item", ref: "it_cucumber", qty: 3 },
-      { id: "rl_s3", kind: "item", ref: "it_onion", qty: 0.6 },
-      { id: "rl_s4", kind: "item", ref: "it_tahini", qty: 0.4 },
-    ],
-  },
-  {
-    id: "rec_yogurt", name_ar: "لبن", name_en: "Yoghurt cup",
-    station: "cold", service_temp: "cold",
-    yield_portions: 60, portion_size_g: 150, prep_minutes: 20, shelf_life_hours: 12,
-    lines: [{ id: "rl_y1", kind: "item", ref: "it_yogurt", qty: 9 }],
-  },
-  {
-    id: "rec_dates", name_ar: "طبق تمر", name_en: "Dates plate",
-    station: "cold", service_temp: "ambient",
-    yield_portions: 100, portion_size_g: 40, prep_minutes: 15, shelf_life_hours: 720,
-    lines: [{ id: "rl_d1", kind: "item", ref: "it_dates", qty: 4.2 }],
-  },
-  {
-    id: "rec_bread", name_ar: "خبز", name_en: "Bread service",
-    station: "bakery", service_temp: "ambient",
-    yield_portions: 100, portion_size_g: 90, prep_minutes: 10, shelf_life_hours: 20,
-    lines: [{ id: "rl_b1", kind: "item", ref: "it_bread", qty: 100 }],
-  },
-  {
-    id: "rec_water", name_ar: "مياه", name_en: "Bottled water",
-    station: "beverage", service_temp: "cold",
-    yield_portions: 100, portion_size_g: 200, prep_minutes: 5, shelf_life_hours: 8760,
-    lines: [{ id: "rl_w1", kind: "item", ref: "it_water", qty: 100 }],
-  },
-  {
-    id: "rec_juice", name_ar: "عصير", name_en: "Juice service",
-    station: "beverage", service_temp: "cold",
-    yield_portions: 100, portion_size_g: 200, prep_minutes: 5, shelf_life_hours: 2160,
-    lines: [{ id: "rl_j1", kind: "item", ref: "it_juice", qty: 100 }],
-  },
-  {
-    id: "rec_boxing", name_ar: "تعبئة الوجبة", name_en: "Meal boxing",
-    station: "assembly", service_temp: "ambient",
-    yield_portions: 100, portion_size_g: 0, prep_minutes: 60, shelf_life_hours: 8760,
-    lines: [{ id: "rl_x1", kind: "item", ref: "it_mealbox", qty: 100 }],
-  },
-]
+/**
+ * Bills of materials for six of the transcribed dishes.
+ *
+ * Keyed by the Arabic name rather than by recipe id: the ids come out of
+ * `scripts/seed-from-docs.mjs` and shift the moment the source document
+ * changes, whereas the name is what the document says.
+ *
+ * Six dishes across three sections — enough to prove the chain end to end
+ * (item → variant → recipe → menu → food cost) at real prices. The other 113
+ * stay drafts, which is the truth: nobody has costed them.
+ *
+ * Quantities are per batch, at the batch yield the generator assigned
+ * (50 portions for appetisers, 40 for mains).
+ */
+const COSTED: Record<string, Array<[string, number]>> = {
+  متبل: [["it_eggplant", 5], ["it_tahini", 0.6], ["it_lemon", 0.5], ["it_garlic", 0.1], ["it_oil", 0.3]],
+  حمص: [["it_chickpea", 2.5], ["it_tahini", 0.8], ["it_lemon", 0.5], ["it_garlic", 0.12], ["it_oil", 0.4]],
+  تبولة: [["it_parsley", 2], ["it_burghul", 0.8], ["it_tomato", 1.5], ["it_lemon", 0.6], ["it_oil", 0.35]],
+  "سلطة خضراء": [["it_lettuce", 3], ["it_cucumber", 1.5], ["it_tomato", 1.5], ["it_onion", 0.4]],
+  "سمبوسك لحم": [["it_flour", 2.2], ["it_beef", 2], ["it_onion", 0.8], ["it_oil", 1.2], ["it_spice", 0.08]],
+  "رز كابلي باللحم": [["it_rice", 6], ["it_lamb", 7], ["it_onion", 1.2], ["it_tomato", 0.8], ["it_oil", 0.7], ["it_spice", 0.15], ["it_cardamom", 0.03]],
+}
 
-/* ── menus ──────────────────────────────────────────────────────── */
+let lineSeq = 0
+const linesFor = (name: string): RecipeLine[] =>
+  (COSTED[name] ?? []).map(([ref, qty]) => ({
+    id: `rl_seed_${lineSeq++}`,
+    kind: "item" as const,
+    ref,
+    qty,
+  }))
 
-export const SEED_MENUS: Menu[] = [
-  {
-    id: "menu_breakfast", name_ar: "فطور أساسي", name_en: "Standard breakfast",
-    tier: "economy", meal_period: "breakfast", price_per_cover_sar: 19,
-    items: [
-      { id: "mi_bf1", recipe: "rec_bread", portions_per_cover: 1 },
-      { id: "mi_bf2", recipe: "rec_yogurt", portions_per_cover: 1 },
-      { id: "mi_bf3", recipe: "rec_dates", portions_per_cover: 1 },
-      { id: "mi_bf4", recipe: "rec_water", portions_per_cover: 1 },
-      { id: "mi_bf5", recipe: "rec_boxing", portions_per_cover: 1 },
-    ],
-  },
-  {
-    id: "menu_lunch_std", name_ar: "غداء قياسي", name_en: "Standard lunch",
-    tier: "standard", meal_period: "lunch", price_per_cover_sar: 46,
-    items: [
-      { id: "mi_ls1", recipe: "rec_kabsa", portions_per_cover: 1 },
-      { id: "mi_ls2", recipe: "rec_salad", portions_per_cover: 1 },
-      { id: "mi_ls3", recipe: "rec_dates", portions_per_cover: 0.5 },
-      { id: "mi_ls4", recipe: "rec_water", portions_per_cover: 1 },
-    ],
-  },
-  {
-    id: "menu_lunch_prem", name_ar: "غداء مميز", name_en: "Premium lunch",
-    tier: "premium", meal_period: "lunch",
-    // Lands at ~41% food cost against a 30% target — lamb at 68% yield is what
-    // does it. The menus page flags it and «تسعير على المستهدف» fixes it.
-    price_per_cover_sar: 89,
-    items: [
-      { id: "mi_lp1", recipe: "rec_mandi", portions_per_cover: 1 },
-      { id: "mi_lp2", recipe: "rec_salad", portions_per_cover: 1 },
-      { id: "mi_lp3", recipe: "rec_dates", portions_per_cover: 1 },
-      { id: "mi_lp4", recipe: "rec_juice", portions_per_cover: 1 },
-    ],
-  },
-  {
-    id: "menu_dinner", name_ar: "عشاء خفيف", name_en: "Light dinner",
-    tier: "economy", meal_period: "dinner",
-    // Sits on target at ~29%, as the counter-example: not every menu is a
-    // finding, and an empty checks page has to be reachable.
-    price_per_cover_sar: 27,
-    items: [
-      { id: "mi_dn1", recipe: "rec_kabsa", portions_per_cover: 0.8 },
-      { id: "mi_dn2", recipe: "rec_salad", portions_per_cover: 1 },
-      { id: "mi_dn3", recipe: "rec_water", portions_per_cover: 1 },
-      { id: "mi_dn4", recipe: "rec_boxing", portions_per_cover: 1 },
-    ],
-  },
-]
+/* ── the catalogue ──────────────────────────────────────────────── */
+
+/**
+ * The 119 dish names transcribed from the client's package proposal, with a
+ * bill of materials attached to the six that `COSTED` covers.
+ *
+ * The rest stay `draft: true` with no lines — which is what they are. A company
+ * that lists ~120 dishes has most of them as a name on a package long before
+ * anyone writes the recipe, and inventing ingredients to fill the gap would put
+ * fabricated numbers in front of someone pricing a quote.
+ */
+export const SEED_RECIPES: Recipe[] = DOC_RECIPES.map((r) => {
+  const lines = linesFor(r.name_ar)
+  return lines.length > 0 ? { ...r, draft: false, lines } : r
+})
+
+export const SEED_MENUS = DOC_MENUS

@@ -70,7 +70,20 @@ const recipe = (over) => ({
   portion_size_g: 400,
   prep_minutes: 0,
   shelf_life_hours: 4,
+  draft: false,
   lines: [],
+  ...over,
+})
+
+const menu = (over) => ({
+  name_ar: over.id,
+  name_en: over.id,
+  service_line: "buffet",
+  level: null,
+  meal_period: null,
+  items: [],
+  inclusions: [],
+  price_per_cover_sar: null,
   ...over,
 })
 
@@ -122,11 +135,11 @@ function fixture() {
     }),
   ]
   const menus = [
-    {
-      id: "m1", name_ar: "m", name_en: "m", tier: "standard", meal_period: "lunch",
+    menu({
+      id: "m1",
       price_per_cover_sar: 46,
-      items: [{ id: "i1", recipe: "kabsa", portions_per_cover: 1 }],
-    },
+      items: [{ id: "i1", recipe: "kabsa", course: "main", portions_per_cover: 1 }],
+    }),
   ]
   return build(items, variants, recipes, menus)
 }
@@ -429,4 +442,81 @@ test("a 100% yield on meat or produce is questioned, per variant", () => {
   cat.variants.get("chicken_fresh").yield_pct = 100
   const hits = codes(check(cat)).filter((c) => c === "variant.suspicious_yield")
   assert.equal(hits.length, 1, "the frozen variant at 74% is not questioned")
+})
+
+/* ── packages transcribed from a proposal ───────────────────────── */
+
+/**
+ * The catalogue carries ~120 dish names imported from the client's package
+ * document, none of them costed. These rules keep that honest without burying
+ * every real finding under a wall of them.
+ */
+
+test("a draft with no lines is not a defect — it is a name nobody has costed", () => {
+  const cat = fixture()
+  cat.recipes.set("stub", recipe({ id: "stub", draft: true, lines: [] }))
+  assert.ok(!codes(check(cat)).includes("recipe.no_lines"))
+})
+
+test("a NON-draft with no lines still blocks — someone emptied it", () => {
+  const cat = fixture()
+  cat.recipes.set("emptied", recipe({ id: "emptied", draft: false, lines: [] }))
+  const hit = check(cat).find((i) => i.code === "recipe.no_lines")
+  assert.equal(hit.entityId, "emptied")
+  assert.equal(hit.level, "error")
+})
+
+test("uncosted dishes are rolled up onto the menu, once, not per dish", () => {
+  const cat = fixture()
+  cat.recipes.set("d1", recipe({ id: "d1", draft: true }))
+  cat.recipes.set("d2", recipe({ id: "d2", draft: true }))
+  cat.menus.set(
+    "pkg",
+    menu({
+      id: "pkg",
+      items: [
+        { id: "a", recipe: "d1", course: "cold_appetiser", portions_per_cover: 0.2 },
+        { id: "b", recipe: "d2", course: "main", portions_per_cover: 0.3 },
+      ],
+    }),
+  )
+  const hits = check(cat).filter((i) => i.code === "menu.uncosted_dishes")
+  assert.equal(hits.length, 1)
+  assert.equal(hits[0].entityId, "pkg")
+  assert.match(hits[0].message, /2/)
+})
+
+test("an unpriced package is not a pricing defect while its dishes are uncosted", () => {
+  const cat = fixture()
+  cat.recipes.set("d1", recipe({ id: "d1", draft: true }))
+  cat.menus.set(
+    "pkg",
+    menu({
+      id: "pkg",
+      items: [{ id: "a", recipe: "d1", course: "main", portions_per_cover: 1 }],
+    }),
+  )
+  const priced = check(cat).filter((i) => i.code === "menu.unpriced" && i.entityId === "pkg")
+  assert.deepEqual(priced, [], "the missing price is a consequence, not a decision")
+
+  // Once the dish is costed, the missing price IS the outstanding decision.
+  cat.recipes.get("d1").draft = false
+  cat.recipes.get("d1").lines = [{ id: "x", kind: "item", ref: "rice", qty: 1 }]
+  assert.ok(
+    check(cat).some((i) => i.code === "menu.unpriced" && i.entityId === "pkg"),
+  )
+})
+
+test("a station is defined by its inclusions, so no dishes is not empty", () => {
+  const cat = fixture()
+  cat.menus.set(
+    "station",
+    menu({ id: "station", service_line: "station", items: [], inclusions: ["الذبيحة", "الطاولات"] }),
+  )
+  assert.ok(!codes(check(cat)).includes("menu.no_items"))
+
+  // A package with neither dishes nor inclusions genuinely is empty.
+  cat.menus.set("hollow", menu({ id: "hollow", items: [], inclusions: [] }))
+  const hit = check(cat).find((i) => i.code === "menu.no_items")
+  assert.equal(hit.entityId, "hollow")
 })

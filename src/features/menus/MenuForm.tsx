@@ -7,8 +7,18 @@ import { Button } from "@/components/ui/button"
 import { Field, Input, NumInput, SelectField } from "@/components/ui/field"
 import { useLocale } from "@/i18n/LocaleProvider"
 import { menuCost, menuVerdict, priceForTarget, recipeCost, withVat } from "@/engine/costing"
-import { dec2, foodCostTone, mealOptions, money, pct, pickName, tierOptions, toneClasses } from "@/lib/display"
-import type { Menu } from "@/engine/schemas"
+import {
+  COURSE_ORDER,
+  dec2,
+  foodCostTone,
+  lineOptions,
+  mealOptions,
+  money,
+  pct,
+  pickName,
+  toneClasses,
+} from "@/lib/display"
+import type { Menu, MenuCourseValue } from "@/engine/schemas"
 import { cn } from "@/lib/utils"
 import { priceMenuAtTarget, removeMenuItem, state } from "@/store/ops"
 import { useCatalog } from "@/store/use-issues"
@@ -31,7 +41,8 @@ export function MenuForm({
   onAddDish,
 }: {
   menuId: string
-  onAddDish: (menuId: string) => void
+  /** Opens the picker for one section — a dish is always added into a course. */
+  onAddDish: (menuId: string, course: MenuCourseValue) => void
 }) {
   const snap = useSnapshot(state)
   const { t } = useTranslation()
@@ -71,107 +82,173 @@ export function MenuForm({
               }}
             />
           </Field>
-          <Field label={t("tier.standard")}>
+          <Field label={t("field.service_line")}>
             <SelectField
-              value={menu.tier}
+              value={menu.service_line}
               onChange={(v) => {
-                edit().tier = v as Menu["tier"]
+                edit().service_line = v as Menu["service_line"]
               }}
-              options={tierOptions(t)}
+              options={lineOptions(t)}
               allowEmpty={false}
             />
           </Field>
+          <Field label={t("field.level")} hint={t("field.level_hint")}>
+            <NumInput
+              value={menu.level ?? ""}
+              onChange={(e) => {
+                edit().level =
+                  e.target.value === "" ? null : Math.max(1, Number(e.target.value) || 1)
+              }}
+            />
+          </Field>
+          {/* Nullable: a buffet package is sold by occasion, not by meal. */}
           <Field label={t("field.meal")}>
             <SelectField
-              value={menu.meal_period}
+              value={menu.meal_period ?? ""}
               onChange={(v) => {
-                edit().meal_period = v as Menu["meal_period"]
+                edit().meal_period = (v || null) as Menu["meal_period"]
               }}
               options={mealOptions(t)}
-              allowEmpty={false}
             />
           </Field>
         </div>
       </Card>
 
       {/* ── what is in it ────────────────────────────────────────── */}
-      <Card
-        title={t("section.composition")}
-        actions={
-          <Button size="sm" variant="outline" onClick={() => onAddDish(menuId)}>
-            <Plus className="size-3.5" />
-            {t("action.add_dish")}
-          </Button>
-        }
-        bodyClassName="p-0"
-      >
-        {menu.items.length === 0 ? (
-          <p className="px-4 py-8 text-center text-[13px] text-muted-foreground">
+      {/* Grouped by course, in the order a buffet is laid out — which is the
+          order the packages are written in and the order a guest walks it. A
+          flat list hid the shape of the menu: you could not see that a package
+          had twenty mains and one salad. */}
+      {COURSE_ORDER.map((course) => {
+        const rows = menu.items.filter((i) => i.course === course)
+        if (rows.length === 0) return null
+        const sectionCost = rows.reduce(
+          (sum, i) => sum + recipeCost(i.recipe, catalog).perPortion * i.portions_per_cover,
+          0,
+        )
+        return (
+          <Card
+            key={course}
+            title={t(`course.${course}`)}
+            description={t("graph.dish_count", { n: rows.length })}
+            actions={
+              <span className="flex items-center gap-2">
+                <span className="text-[12px] font-semibold tabular-nums">{money(sectionCost)}</span>
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  aria-label={t("action.add_dish")}
+                  onClick={() => onAddDish(menuId, course)}
+                >
+                  <Plus className="size-3.5" />
+                </Button>
+              </span>
+            }
+            bodyClassName="p-0"
+          >
+            <ul className="divide-y divide-surface-line">
+              {rows.map((item) => {
+                const recipe = snap.recipes.find((r) => r.id === item.recipe)
+                const perPortion = recipeCost(item.recipe, catalog).perPortion
+                const label = recipe ? pickName(recipe, locale) : item.recipe
+                const share =
+                  cost.rawPerCover > 0
+                    ? ((perPortion * item.portions_per_cover) / cost.rawPerCover) * 100
+                    : 0
+                return (
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 py-2.5"
+                  >
+                    {/* basis-full below `sm` puts the name on its own line, so a
+                        long Arabic dish name never squeezes the numbers. */}
+                    <span className="flex min-w-0 basis-full flex-col sm:flex-1 sm:basis-auto">
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "truncate text-[13px]",
+                            !recipe && "text-[color:var(--brand-ruby-deep)]",
+                          )}
+                        >
+                          {label}
+                        </span>
+                        {recipe?.draft && (
+                          <span className="shrink-0 rounded bg-[color:var(--brand-amber-soft)] px-1 text-[9px] font-bold text-[color:var(--brand-amber-deep)]">
+                            {t("field.uncosted")}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {recipe ? t(`station.${recipe.station}`) : "—"} · {dec2(share)}%
+                      </span>
+                    </span>
+
+                    <NumInput
+                      aria-label={`${t("field.portions_per_cover")} — ${label}`}
+                      value={item.portions_per_cover}
+                      onChange={(e) => {
+                        const live = edit().items.find((x) => x.id === item.id)
+                        if (live) live.portions_per_cover = Math.max(0, Number(e.target.value) || 0)
+                      }}
+                      className="h-7 w-20 text-end"
+                    />
+                    <span className="w-10 shrink-0 text-[10px] text-muted-foreground">
+                      {t("unit.portion")}
+                    </span>
+                    {/* An uncosted dish costs an unknown amount, not zero —
+                        same rule as the canvas chips and the recipe list. */}
+                    <span className="w-24 shrink-0 text-end text-[11px] text-muted-foreground tabular-nums">
+                      {recipe?.draft ? "—" : `@ ${money(perPortion)}`}
+                    </span>
+                    <span className="w-24 shrink-0 text-end text-[13px] font-semibold tabular-nums">
+                      {recipe?.draft ? "—" : money(perPortion * item.portions_per_cover)}
+                    </span>
+
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`${t("action.remove")} — ${label}`}
+                      onClick={() => removeMenuItem(menuId, item.id)}
+                    >
+                      <Trash2 className="size-3.5 text-muted-foreground" />
+                    </Button>
+                  </li>
+                )
+              })}
+            </ul>
+          </Card>
+        )
+      })}
+
+      {/* An empty package is only empty if it has no inclusions either — the
+          whole-lamb station is defined entirely by what comes with it. */}
+      {menu.items.length === 0 && menu.inclusions.length === 0 && (
+        <Card
+          title={t("section.composition")}
+          actions={
+            <Button size="sm" variant="outline" onClick={() => onAddDish(menuId, "main")}>
+              <Plus className="size-3.5" />
+              {t("action.add_dish")}
+            </Button>
+          }
+        >
+          <p className="py-6 text-center text-[13px] text-muted-foreground">
             {t("empty.composition")}
           </p>
-        ) : (
+        </Card>
+      )}
+
+      {menu.inclusions.length > 0 && (
+        <Card title={t("section.inclusions")} bodyClassName="p-0">
           <ul className="divide-y divide-surface-line">
-            {menu.items.map((item) => {
-              const recipe = snap.recipes.find((r) => r.id === item.recipe)
-              const perPortion = recipeCost(item.recipe, catalog).perPortion
-              const label = recipe ? pickName(recipe, locale) : item.recipe
-              const share = cost.rawPerCover > 0
-                ? ((perPortion * item.portions_per_cover) / cost.rawPerCover) * 100
-                : 0
-              return (
-                <li
-                  key={item.id}
-                  className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 py-2.5"
-                >
-                  {/* basis-full below `sm` puts the name on its own line, so a
-                      long Arabic dish name never squeezes the numbers. */}
-                  <span className="flex min-w-0 basis-full flex-col sm:flex-1 sm:basis-auto">
-                    <span
-                      className={cn(
-                        "truncate text-[13px]",
-                        !recipe && "text-[color:var(--brand-ruby-deep)]",
-                      )}
-                    >
-                      {label}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {recipe ? t(`station.${recipe.station}`) : "—"} · {dec2(share)}%
-                    </span>
-                  </span>
-
-                  <NumInput
-                    aria-label={`${t("field.portions_per_cover")} — ${label}`}
-                    value={item.portions_per_cover}
-                    onChange={(e) => {
-                      const live = edit().items.find((x) => x.id === item.id)
-                      if (live) live.portions_per_cover = Math.max(0, Number(e.target.value) || 0)
-                    }}
-                    className="h-7 w-20 text-end"
-                  />
-                  <span className="w-10 shrink-0 text-[10px] text-muted-foreground">
-                    {t("unit.portion")}
-                  </span>
-                  <span className="w-24 shrink-0 text-end text-[11px] text-muted-foreground tabular-nums">
-                    @ {money(perPortion)}
-                  </span>
-                  <span className="w-24 shrink-0 text-end text-[13px] font-semibold tabular-nums">
-                    {money(perPortion * item.portions_per_cover)}
-                  </span>
-
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`${t("action.remove")} — ${label}`}
-                    onClick={() => removeMenuItem(menuId, item.id)}
-                  >
-                    <Trash2 className="size-3.5 text-muted-foreground" />
-                  </Button>
-                </li>
-              )
-            })}
+            {menu.inclusions.map((inc, i) => (
+              <li key={i} className="px-4 py-2.5 text-[13px]">
+                {inc}
+              </li>
+            ))}
           </ul>
-        )}
-      </Card>
+        </Card>
+      )}
 
       {/* ── what it sells for ────────────────────────────────────── */}
       <Card

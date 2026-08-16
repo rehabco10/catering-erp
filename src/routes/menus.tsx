@@ -14,7 +14,7 @@ import { MenuGraph } from "@/features/menus/graph/MenuGraph"
 import { useLocale, useLocalePath } from "@/i18n/LocaleProvider"
 import { menuCost } from "@/engine/costing"
 import { foodCostTone, money, pct, pickName, toneClasses } from "@/lib/display"
-import type { MenuTierValue } from "@/engine/schemas"
+import { ServiceLine, type MenuCourseValue, type ServiceLineValue } from "@/engine/schemas"
 import { cn } from "@/lib/utils"
 import { select, state, toggleExpandedMenu } from "@/store/ops"
 import { useCatalog } from "@/store/use-issues"
@@ -31,8 +31,8 @@ import { useCatalog } from "@/store/use-issues"
  *
  *   **graph** — "which dish is eating the margin, and how does the catalogue
  *   sit against the target". A composition question, so it gets a tree:
- *   catalogue → tier → menu → dish, where the expensive branch is literally
- *   wider. Modelled on the package wizard's canvas.
+ *   catalogue → service line → package → dish, where the expensive branch is
+ *   literally wider. Modelled on the package wizard's canvas.
  *
  * The mode lives in the URL (`?view=`), so a link carries which view the sender
  * was looking at — the graph is worth sending, and a mode kept in component
@@ -50,14 +50,15 @@ export function MenusPage() {
   const [view, setView] = useQueryState("view")
   const graph = view === "graph"
 
-  const [tier, setTier] = useState<MenuTierValue | null>(null)
-  const [addingTo, setAddingTo] = useState<string | null>(null)
+  const [line, setLine] = useState<ServiceLineValue | null>(null)
+  // Which menu, and into which section — a dish is never added loose.
+  const [adding, setAdding] = useState<{ menu: string; course: MenuCourseValue } | null>(null)
 
   const costed = useMemo(
     () => snap.menus.map((m) => ({ menu: m, cost: menuCost(m.id, catalog) })),
     [snap.menus, catalog],
   )
-  const shown = tier ? costed.filter((c) => c.menu.tier === tier) : costed
+  const shown = line ? costed.filter((c) => c.menu.service_line === line) : costed
   const selected = menuId ? snap.menus.find((m) => m.id === menuId) : undefined
   const go = (id: string | null) => navigate(localePath(id ? `/menus/${id}` : "/menus"))
 
@@ -104,7 +105,12 @@ export function MenusPage() {
 
       {graph ? (
         <div className="min-h-0 flex-1">
-          <MenuGraph onMenuActivated={openFromGraph} onAddDish={setAddingTo} />
+          {/* The canvas has no section to add into, so it opens the picker on
+              mains — the section a dish most often belongs to. */}
+          <MenuGraph
+            onMenuActivated={openFromGraph}
+            onAddDish={(menu) => setAdding({ menu, course: "main" })}
+          />
         </div>
       ) : (
         <div className="min-h-0 flex-1 px-4 py-4">
@@ -115,13 +121,13 @@ export function MenusPage() {
             master={
               <>
                 <FilterChips
-                  value={tier}
-                  onChange={setTier}
-                  options={(["economy", "standard", "premium"] as MenuTierValue[])
+                  value={line}
+                  onChange={setLine}
+                  options={ServiceLine.options
                     .map((v) => ({
                       value: v,
-                      label: t(`tier.${v}`),
-                      count: costed.filter((c) => c.menu.tier === v).length,
+                      label: t(`line.${v}`),
+                      count: costed.filter((c) => c.menu.service_line === v).length,
                     }))
                     .filter((o) => o.count > 0)}
                 />
@@ -147,11 +153,13 @@ export function MenusPage() {
                           {pickName(menu, locale)}
                         </span>
                         <span className="shrink-0 text-[10px] text-muted-foreground">
-                          {t(`tier.${menu.tier}`)}
+                          {t(`line.${menu.service_line}`)}
+                          {menu.level !== null ? ` ${menu.level}` : ""}
                         </span>
                       </div>
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {t(`meal.${menu.meal_period}`)} · {t("graph.dish_count", { n: menu.items.length })}
+                        {menu.meal_period ? `${t(`meal.${menu.meal_period}`)} · ` : ""}
+                        {t("graph.dish_count", { n: menu.items.length })}
                       </p>
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className="text-[12px] tabular-nums">
@@ -177,7 +185,12 @@ export function MenusPage() {
               </>
             }
             detail={
-              selected ? <MenuForm menuId={selected.id} onAddDish={setAddingTo} /> : null
+              selected ? (
+                <MenuForm
+                  menuId={selected.id}
+                  onAddDish={(menu, course) => setAdding({ menu, course })}
+                />
+              ) : null
             }
           />
         </div>
@@ -186,9 +199,10 @@ export function MenusPage() {
       {/* One picker for both modes — the canvas (+) and the form button open
           the same sheet, so adding a dish is one flow however you got here. */}
       <AddDishSheet
-        menuId={addingTo}
-        open={addingTo !== null}
-        onOpenChange={(o) => !o && setAddingTo(null)}
+        menuId={adding?.menu ?? null}
+        course={adding?.course ?? "main"}
+        open={adding !== null}
+        onOpenChange={(o) => !o && setAdding(null)}
       />
     </div>
   )

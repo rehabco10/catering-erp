@@ -5,7 +5,7 @@ import { ChevronDown, ChevronLeft, Pin, Plus, TriangleAlert } from "lucide-react
 import { useLocale } from "@/i18n/LocaleProvider"
 import { LOCALE_DIR } from "@/i18n/locale"
 import { dec2, money } from "@/lib/display"
-import type { MenuTierValue, StationValue } from "@/engine/schemas"
+import type { ServiceLineValue, StationValue } from "@/engine/schemas"
 import { cn } from "@/lib/utils"
 
 /**
@@ -15,9 +15,9 @@ import { cn } from "@/lib/utils"
  * nothing has to be measured and the layout can never disagree with what is
  * painted. Handles are invisible — the edges are the story, not the ports.
  *
- * Tint carries meaning and nothing else does: a card's colour is its tier on
- * the menu family, its station on the dish family, and ruby whenever the
- * number on it is wrong.
+ * Tint carries meaning and nothing else does: a card's colour is its service
+ * line on the menu family, its station on the dish family, and ruby whenever
+ * the number on it is wrong.
  */
 
 export type Tint = "navy" | "green" | "amber" | "ruby" | "stone"
@@ -58,10 +58,20 @@ const TINT_GRADIENT: Record<Tint, string> = {
     "bg-gradient-to-b from-[color:var(--brand-stone-soft)] to-white border-[color:color-mix(in_srgb,var(--brand-stone)_50%,transparent)]",
 }
 
-export const TIER_TINT: Record<MenuTierValue, Tint> = {
-  premium: "amber",
-  standard: "navy",
-  economy: "stone",
+/**
+ * One hue per service line — the axis the catalogue is actually grouped on.
+ *
+ * Replaces an economy/standard/premium tint, which coloured an invented field.
+ * Buffet, cooked-to-order, pre-prepared, dry and station are four different
+ * production chains plus a station, and that is worth a colour; a made-up
+ * quality ladder was not.
+ */
+export const LINE_TINT: Record<ServiceLineValue, Tint> = {
+  buffet: "navy",
+  traditional: "amber",
+  frozen: "green",
+  dry: "stone",
+  station: "ruby",
 }
 
 export const STATION_TINT: Record<StationValue, Tint> = {
@@ -244,33 +254,33 @@ export function CatalogueNode({ data }: NodeProps<Node<CatalogueData>>) {
   )
 }
 
-/* ── tier grouping ──────────────────────────────────────────────── */
+/* ── service-line grouping ──────────────────────────────────────── */
 
-export interface TierData extends Record<string, unknown> {
-  tier: MenuTierValue
+export interface LineData extends Record<string, unknown> {
+  line: ServiceLineValue
   label: string
   count: number
   onAdd: () => void
 }
 
-export const TIER_W = 150
-export const TIER_H = 72
+export const LINE_W = 150
+export const LINE_H = 72
 
 /**
  * Derived grouping node — no stored entity behind it. It exists so the canvas
- * reads catalogue → tier → menu, and so «إضافة» under a tier creates a menu
- * already carrying that tier.
+ * reads catalogue → service line → package, and so «إضافة» under a line
+ * creates a menu already carrying it.
  */
-export function TierNode({ data }: NodeProps<Node<TierData>>) {
+export function LineNode({ data }: NodeProps<Node<LineData>>) {
   const { t } = useTranslation()
-  const tint = TIER_TINT[data.tier]
+  const tint = LINE_TINT[data.line]
   return (
     <>
       <Handle type="target" position={Position.Left} className="!opacity-0" />
-      <Card tint={tint} selected={false} width={TIER_W} height={TIER_H}>
+      <Card tint={tint} selected={false} width={LINE_W} height={LINE_H}>
         <div className={cn("text-[13px] font-bold", TINT_FG[tint])}>{data.label}</div>
         <div className="text-[10px] text-foreground/60">
-          {t("graph.menu_count", { n: data.count })}
+          {t("graph.package_count", { n: data.count })}
         </div>
         <AddButton visible={false} title={t("action.add_menu")} onClick={data.onAdd} />
       </Card>
@@ -283,9 +293,12 @@ export function TierNode({ data }: NodeProps<Node<TierData>>) {
 
 export interface MenuNodeData extends Record<string, unknown> {
   name: string
-  tier: MenuTierValue
-  mealLabel: string
+  line: ServiceLineValue
+  /** Meal period and package number, already resolved — both are optional. */
+  subtitle: string
   dishCount: number
+  /** Dishes on this package that nobody has costed yet. */
+  uncosted: number
   costPerCover: number
   pricePerCover: number | null
   foodCostPct: number | null
@@ -304,7 +317,7 @@ export const MENU_H = 112
 
 export function MenuNode({ data }: NodeProps<Node<MenuNodeData>>) {
   const { t } = useTranslation()
-  const tint = TIER_TINT[data.tier]
+  const tint = LINE_TINT[data.line]
   const over = data.foodCostPct !== null && data.foodCostPct > data.targetPct + 2
   const pctTint: Tint = data.foodCostPct === null ? "stone" : over ? "ruby" : "green"
 
@@ -325,7 +338,7 @@ export function MenuNode({ data }: NodeProps<Node<MenuNodeData>>) {
             <div className="truncate text-[13px] leading-tight font-bold text-foreground">
               {data.name}
             </div>
-            <div className="mt-0.5 text-[10px] text-foreground/60">{data.mealLabel}</div>
+            <div className="mt-0.5 truncate text-[10px] text-foreground/60">{data.subtitle}</div>
           </div>
           <span
             className={cn(
@@ -340,7 +353,14 @@ export function MenuNode({ data }: NodeProps<Node<MenuNodeData>>) {
 
         <div className="flex items-baseline justify-between text-[11px] tabular-nums">
           <span className="text-foreground/70">
-            {t("field.cost")} <b className="font-semibold text-foreground">{money(data.costPerCover)}</b>
+            {t("field.cost")}{" "}
+            <b className="font-semibold text-foreground">
+              {/* A package whose dishes are all uncosted costs an unknown
+                  amount, not zero. Printing 0.00 reads as free. */}
+              {data.costPerCover === 0 && (data.uncosted > 0 || data.dishCount === 0)
+                ? "—"
+                : money(data.costPerCover)}
+            </b>
           </span>
           <span className="text-foreground/70">
             {t("field.price")}{" "}
@@ -367,13 +387,114 @@ export function MenuNode({ data }: NodeProps<Node<MenuNodeData>>) {
             )}
             {t("graph.dish_count", { n: data.dishCount })}
           </button>
-          {data.errorCount > 0 && (
-            <span className="flex items-center gap-1 font-semibold text-[color:var(--brand-ruby-deep)] tabular-nums">
-              <TriangleAlert className="size-3" />
-              {data.errorCount}
+          <span className="flex items-center gap-2">
+            {/* An uncosted count, not a cost, is the honest headline on a
+                package transcribed from a proposal: the price is missing
+                because the dishes are, and saying so beats showing 0.00. */}
+            {data.uncosted > 0 && (
+              <span className="font-semibold text-[color:var(--brand-amber-deep)] tabular-nums">
+                {t("field.uncosted")} {data.uncosted}
+              </span>
+            )}
+            {data.errorCount > 0 && (
+              <span className="flex items-center gap-1 font-semibold text-[color:var(--brand-ruby-deep)] tabular-nums">
+                <TriangleAlert className="size-3" />
+                {data.errorCount}
+              </span>
+            )}
+          </span>
+        </div>
+
+        <AddButton visible={data.selected} title={t("action.add_dish")} onClick={data.onAdd} />
+      </Card>
+      <Handle type="source" position={Position.Right} className="!opacity-0" />
+    </>
+  )
+}
+
+/* ── course (قسم) ───────────────────────────────────────────────── */
+
+export interface CourseData extends Record<string, unknown> {
+  label: string
+  dishCount: number
+  uncosted: number
+  /** What this whole section contributes to one cover. */
+  costPerCover: number
+  /** Its share of the package's raw plate cost, 0–100. */
+  sharePct: number
+  expanded: boolean
+  selected: boolean
+  pinned: boolean
+  onToggle: () => void
+  onAdd: () => void
+}
+
+export const COURSE_W = 200
+export const COURSE_H = 92
+
+/**
+ * A buffet section — «المقبلات الباردة», «الأطباق الرئيسية».
+ *
+ * This rank exists to keep the canvas usable. A transcribed package carries up
+ * to 81 dishes; hanging them off the package put 81 cards on screen at once.
+ * Five section cards say the same thing — and say it better, because "this
+ * package is 28 cold appetisers and 20 mains" is the shape you actually want
+ * to see, and a wall of dish names hides it.
+ */
+export function CourseNode({ data }: NodeProps<Node<CourseData>>) {
+  const { t } = useTranslation()
+  return (
+    <>
+      <Handle type="target" position={Position.Left} className="!opacity-0" />
+      <Card
+        tint="stone"
+        variant="gradient"
+        selected={data.selected}
+        width={COURSE_W}
+        height={COURSE_H}
+      >
+        <PinnedMark pinned={data.pinned} />
+
+        <div className="truncate text-[12px] leading-tight font-bold text-foreground">
+          {data.label}
+        </div>
+
+        <div className="flex items-baseline justify-between text-[11px] tabular-nums">
+          <span className="text-foreground/70">
+            {t("graph.dish_count", { n: data.dishCount })}
+          </span>
+          {data.uncosted > 0 ? (
+            <span className="font-semibold text-[color:var(--brand-amber-deep)]">
+              {t("field.uncosted")} {data.uncosted}
             </span>
+          ) : (
+            <b className="font-semibold text-foreground">{money(data.costPerCover)}</b>
           )}
         </div>
+
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/70">
+          <div
+            className={cn("h-full transition-all duration-300", TINT_BAR.stone)}
+            style={{ width: `${Math.min(100, data.sharePct)}%` }}
+          />
+        </div>
+
+        <button
+          type="button"
+          // `nodrag nopan`: this is the accordion, not a handle for the card.
+          className="nodrag nopan mt-auto flex items-center gap-1 self-start rounded px-1 py-0.5 text-[10px] text-foreground/70 hover:bg-white/60"
+          onClick={(e) => {
+            e.stopPropagation()
+            data.onToggle()
+          }}
+        >
+          {data.expanded ? (
+            <ChevronDown className="size-3" />
+          ) : (
+            <ChevronLeft className="size-3 rtl:rotate-180" />
+          )}
+          {data.expanded ? t("graph.collapse") : t("graph.expand")}
+        </button>
 
         <AddButton visible={data.selected} title={t("action.add_dish")} onClick={data.onAdd} />
       </Card>
@@ -391,61 +512,89 @@ export interface DishData extends Record<string, unknown> {
   portionsPerCover: number
   /** What this dish contributes to one cover. */
   costPerCover: number
-  /** Its share of the menu's raw plate cost, 0–100. */
+  /** Its share of its section's cost, 0–100. */
   sharePct: number
+  /** No bill of materials yet — a name transcribed from a package. */
+  uncosted: boolean
   selected: boolean
   pinned: boolean
   invalid: boolean
 }
 
-export const DISH_W = 216
-export const DISH_H = 104
+export const DISH_W = 196
+export const DISH_H = 40
 
+/**
+ * A dish, as a chip.
+ *
+ * Deliberately a fraction of the other cards. A section can hold 28 dishes, and
+ * at the 216×104 card the rest of the family uses that was a 3,000px column of
+ * mostly whitespace — unreadable at fit-view zoom and exhausting to pan. What a
+ * dish actually needs to say in a tree is its name, what it costs, and how big
+ * a slice of the section that is; everything else (station, portions) belongs
+ * on the form, which is one click away.
+ *
+ * Not built on `Card`: the shared chrome carries padding and a gap sized for a
+ * card, and fighting it with overrides would be worse than a purpose-built row.
+ */
 export function DishNode({ data }: NodeProps<Node<DishData>>) {
-  const { t } = useTranslation()
   const tint = STATION_TINT[data.station]
+  const locale = useLocale()
 
   return (
     <>
       <Handle type="target" position={Position.Left} className="!opacity-0" />
-      <Card
-        tint={tint}
-        variant="gradient"
-        selected={data.selected}
-        invalid={data.invalid}
-        width={DISH_W}
-        height={DISH_H}
+      <div
+        dir={LOCALE_DIR[locale]}
+        style={{ width: DISH_W, height: DISH_H }}
+        title={`${data.name} · ${data.stationLabel} · ${dec2(data.portionsPerCover)}`}
+        className={cn(
+          "group relative flex items-center gap-2 overflow-hidden rounded-lg border bg-surface-raised ps-2 pe-2.5 shadow-sm transition-shadow hover:shadow-md",
+          "border-surface-line",
+          data.selected &&
+            "ring-2 ring-[color:var(--brand-navy)] ring-offset-2 ring-offset-background",
+          data.invalid && "border-[color:var(--brand-ruby)]",
+        )}
       >
         <PinnedMark pinned={data.pinned} />
 
-        <div className="truncate text-[12px] leading-tight font-bold text-foreground">
+        {/* Station as a colour stripe rather than a line of text — it is a
+            category, and a category only needs to be distinguishable. */}
+        <span
+          aria-label={data.stationLabel}
+          className={cn("h-5 w-1 shrink-0 rounded-full", TINT_BAR[tint])}
+        />
+
+        <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-foreground">
           {data.name}
-        </div>
-        <div className="text-[10px] text-foreground/60">{data.stationLabel}</div>
+        </span>
 
-        <div className="flex items-baseline justify-between text-[11px] tabular-nums">
-          <span className="text-foreground/70">
-            {dec2(data.portionsPerCover)} {t("unit.portion")}
+        {data.uncosted ? (
+          <span className="shrink-0 rounded bg-[color:var(--brand-amber-soft)] px-1 text-[9px] font-bold text-[color:var(--brand-amber-deep)]">
+            —
           </span>
-          <b className={cn("font-semibold", TINT_FG[tint])}>{money(data.costPerCover)}</b>
-        </div>
+        ) : (
+          <span className={cn("shrink-0 text-[11px] font-semibold tabular-nums", TINT_FG[tint])}>
+            {money(data.costPerCover)}
+          </span>
+        )}
 
-        {/* Share of the plate cost — what makes an expensive dish obvious
-            without reading four numbers and doing the division. */}
-        <div className="mt-auto h-1.5 w-full overflow-hidden rounded-full bg-white/70">
-          <div
-            className={cn("h-full transition-all duration-300", TINT_BAR[tint])}
-            style={{ width: `${Math.min(100, data.sharePct)}%` }}
-          />
-        </div>
-      </Card>
+        {/* Share of the section, as a hairline along the bottom edge: visible
+            as a length without spending a row on it. */}
+        <span
+          aria-hidden
+          className={cn("absolute inset-x-0 bottom-0 h-[3px]", TINT_BAR[tint], "opacity-70")}
+          style={{ width: `${Math.min(100, data.sharePct)}%` }}
+        />
+      </div>
     </>
   )
 }
 
 export const nodeTypes = {
   catalogue: CatalogueNode,
-  tier: TierNode,
+  line: LineNode,
   menu: MenuNode,
+  course: CourseNode,
   dish: DishNode,
 } as const

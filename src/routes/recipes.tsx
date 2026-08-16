@@ -101,13 +101,24 @@ export function RecipesPage() {
                   <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
                     {int(recipe.yield_portions)} × {int(recipe.portion_size_g)}g
                   </p>
-                  <p className="mt-1.5 text-[13px] font-bold tabular-nums">
-                    {money(cost.perPortion)}
-                    <span className="text-[10px] font-normal text-muted-foreground">
-                      {" / "}
-                      {t("unit.portion")}
-                    </span>
-                  </p>
+                  {/* Most of the catalogue is names transcribed from a package
+                      proposal. Showing 0.00 for those would read as free; the
+                      badge says what is actually true. */}
+                  {recipe.draft && recipe.lines.length === 0 ? (
+                    <p className="mt-1.5">
+                      <span className="rounded bg-[color:var(--brand-amber-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[color:var(--brand-amber-deep)]">
+                        {t("field.uncosted")}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-[13px] font-bold tabular-nums">
+                      {money(cost.perPortion)}
+                      <span className="text-[10px] font-normal text-muted-foreground">
+                        {" / "}
+                        {t("unit.portion")}
+                      </span>
+                    </p>
+                  )}
                 </button>
               ))}
             </>

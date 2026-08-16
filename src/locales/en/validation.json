@@ -3,25 +3,18 @@
   "«{name}» بنسبة استخلاص 100% — اللحوم والخضار تفقد جزءًا في التنظيف.": "\"{name}\" is set to 100% yield — meat and produce always lose part of their weight to trim.",
   "«{name}»: الرصيد {have} دون الحد الأدنى {par}.": "\"{name}\": {have} on hand, below the par level of {par}.",
   "«{name}» بلا مورد معتمد.": "\"{name}\" has no approved supplier.",
-  "«{name}» مرتبط بمورد غير موجود.": "\"{name}\" points at a supplier that no longer exists.",
   "«{name}» من مورد بلا شهادة حلال: {supplier}.": "\"{name}\" comes from {supplier}, which holds no halal certificate.",
   "شهادة الحلال لمورد «{name}» منتهية بتاريخ {date}.": "The halal certificate for {name} expired on {date}.",
-
-  "وصفة «{name}» بلا مكوّنات.": "Recipe \"{name}\" has no ingredients.",
   "وصفة «{name}» تشير إلى عنصر محذوف.": "Recipe \"{name}\" references a deleted item.",
   "وصفة «{name}» بها سطر بكمية صفر.": "Recipe \"{name}\" has a line with zero quantity.",
   "وصفة «{name}» تستدعي نفسها عبر وصفة فرعية.": "Recipe \"{name}\" reaches itself through a sub-recipe.",
-
   "قائمة «{name}» بلا أصناف.": "Menu \"{name}\" has no dishes.",
-  "تكلفة قائمة «{name}» ناقصة: {count} مكوّن بلا سعر.": "Menu \"{name}\" is under-costed: {count} ingredient(s) carry no price.",
   "قائمة «{name}» بلا سعر بيع للفرد.": "Menu \"{name}\" has no price per cover.",
   "قائمة «{name}» تُباع بأقل من تكلفتها ({cost} ر.س مقابل {price} ر.س).": "Menu \"{name}\" sells below its own cost (SAR {cost} against SAR {price}).",
   "نسبة تكلفة الطعام في «{name}» {pct}% تتجاوز المستهدف {target}%.": "Food cost on \"{name}\" is {pct}%, over the {target}% target.",
-
   "عقد «{name}» بلا أي خدمة مجدولة.": "Contract \"{name}\" has no services scheduled.",
   "عقد «{name}»: الوجبات المجدولة {planned} تتجاوز المتعاقد عليه {committed}.": "Contract \"{name}\": {planned} covers scheduled against {committed} committed.",
   "خدمة بتاريخ {date} خارج نافذة عقد «{name}».": "A service on {date} falls outside contract \"{name}\"'s window.",
-
   "خدمة {where} بلا قائمة.": "Service {where} has no menu.",
   "خدمة {where} مرتبطة بقائمة محذوفة.": "Service {where} points at a deleted menu.",
   "خدمة {where} بلا عدد وجبات.": "Service {where} has no cover count.",
@@ -29,8 +22,15 @@
   "خدمة {where}: موعد تثبيت العدد يقترب — تبقّى أقل من {hours} ساعة.": "Service {where}: guarantee cutoff approaching — under {hours} hours left.",
   "خدمة {where}: الحضور {actual} تجاوز المنتَج {produced}.": "Service {where}: {actual} attended against {produced} produced.",
   "خدمة {where} مضت دون تسجيل الحضور الفعلي.": "Service {where} has passed with no head count recorded.",
-
   "يوم {date}: الإنتاج المطلوب {covers} وجبة يتجاوز طاقة المطبخ {capacity}.": "{date}: {covers} covers required, over the kitchen's {capacity} capacity.",
   "«{name}» ليوم {date}: كان يجب الطلب بحلول {by}.": "\"{name}\" for {date}: this had to be ordered by {by}.",
-  "«{name}» مطلوب ليوم {date} بلا سعر معروف.": "\"{name}\" is needed for {date} but carries no known price."
+  "«{name}» مطلوب ليوم {date} بلا سعر معروف.": "\"{name}\" is needed for {date} but carries no known price.",
+  "وصفة «{name}» بلا مكوّنات.": "Recipe \"{name}\" has no ingredients.",
+  "قائمة «{name}»: {count} صنف بلا تكلفة بعد.": "Menu \"{name}\": {count} dish(es) not costed yet.",
+  "«{name}» بلا أي عبوة شراء — لا يمكن شراؤه ولا تسعيره.": "\"{name}\" has no purchase option — it can be neither bought nor priced.",
+  "«{name}» بلا عبوة معتمدة — كل وصفة تستخدمه تُحسب بصفر.": "\"{name}\" has no costing basis — every recipe using it costs zero.",
+  "«{name}»: العبوة المعتمدة «{variant}» بلا سعر شراء.": "\"{name}\": the costing basis \"{variant}\" carries no purchase price.",
+  "«{name}»: العبوة المعتمدة أغلى بـ {pct}% من أرخص البدائل.": "\"{name}\": the costing basis is {pct}% dearer than the cheapest option.",
+  "«{name}» مرتبطة بمورد غير موجود.": "\"{name}\" points at a supplier that no longer exists.",
+  "تكلفة قائمة «{name}» ناقصة: {count} مادة بلا سعر.": "Menu \"{name}\" is under-costed: {count} item(s) carry no price."
 }

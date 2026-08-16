@@ -6,7 +6,8 @@ import {
   Allergen,
   IngredientCategory,
   MealPeriod,
-  MenuTier,
+  MenuCourse,
+  ServiceLine,
   Station,
   StorageClass,
 } from "@/engine/schemas"
@@ -69,7 +70,15 @@ const optionsFrom = (values: readonly string[], prefix: string, t: TFunction): S
   values.map((value) => ({ value, label: t(`${prefix}.${value}`) }))
 
 export const mealOptions = (t: TFunction) => optionsFrom(MealPeriod.options, "meal", t)
-export const tierOptions = (t: TFunction) => optionsFrom(MenuTier.options, "tier", t)
+export const courseOptions = (t: TFunction) => optionsFrom(MenuCourse.options, "course", t)
+export const lineOptions = (t: TFunction) => optionsFrom(ServiceLine.options, "line", t)
+
+/**
+ * The order a buffet is laid out in, which is also the order it is read in.
+ * Alphabetical would put desserts before mains in one language and not the
+ * other.
+ */
+export const COURSE_ORDER = MenuCourse.options
 export const stationOptions = (t: TFunction) => optionsFrom(Station.options, "station", t)
 export const storageOptions = (t: TFunction) => optionsFrom(StorageClass.options, "storage", t)
 export const categoryOptions = (t: TFunction) => optionsFrom(IngredientCategory.options, "cat", t)

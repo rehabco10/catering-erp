@@ -19,3 +19,11 @@ Thumbs.db
 # docs/ holds docs/catering-engine.md, which is the sourcing for every rule in
 # src/lib/. If real client contracts or pricing sheets ever land in this repo,
 # ignore those files specifically rather than the whole directory.
+
+# source documents extracted for reading; regenerate with scripts/docx-to-md.mjs
+.extract/
+
+# Client source documents. The *extractions* are tracked in docs/source/;
+# the originals stay local — they are the client's, and they are 24 MB.
+/docs/*.pdf
+/docs/*.docx

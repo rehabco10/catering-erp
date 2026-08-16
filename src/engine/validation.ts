@@ -174,7 +174,15 @@ export function validateCatalogue(input: ValidationInput): Issue[] {
   for (const recipe of catalog.recipes.values()) {
     const label = N(recipe)
     if (recipe.lines.length === 0) {
-      at("error", "recipe.no_lines", "recipe", recipe.id, M("وصفة «{name}» بلا مكوّنات.", { name: label }))
+      // A draft is a name imported from a package that nobody has costed yet.
+      // That is honest incomplete data, and there are ~120 of them — raising a
+      // finding per dish would bury every real one under a wall. It is rolled
+      // up onto the menus that depend on it instead, which is where it stops
+      // someone doing something: you cannot price a package whose dishes have
+      // no cost. A *non*-draft with no lines is a recipe someone emptied.
+      if (!recipe.draft) {
+        at("error", "recipe.no_lines", "recipe", recipe.id, M("وصفة «{name}» بلا مكوّنات.", { name: label }))
+      }
       continue
     }
     for (const line of recipe.lines) {
@@ -200,16 +208,29 @@ export function validateCatalogue(input: ValidationInput): Issue[] {
   for (const menu of catalog.menus.values()) {
     const label = N(menu)
     if (menu.items.length === 0) {
-      at("error", "menu.no_items", "menu", menu.id, M("قائمة «{name}» بلا أصناف.", { name: label }))
+      // A station is defined by its inclusions, not by dishes, so an empty
+      // item list is only a defect when there is nothing else in the package.
+      if (menu.inclusions.length === 0) {
+        at("error", "menu.no_items", "menu", menu.id, M("قائمة «{name}» بلا أصناف.", { name: label }))
+      }
       continue
     }
+    const uncosted = menu.items.filter((i) => catalog.recipes.get(i.recipe)?.draft).length
+    if (uncosted > 0) {
+      at("warning", "menu.uncosted_dishes", "menu", menu.id, M("قائمة «{name}»: {count} صنف بلا تكلفة بعد.", { name: label, count: n(uncosted) }))
+    }
+
     const cost = menuCost(menu.id, catalog)
     if (cost.gaps.unpricedItems.length > 0 || cost.gaps.itemsWithoutPreferred.length > 0) {
       at("warning", "menu.incomplete_cost", "menu", menu.id, M("تكلفة قائمة «{name}» ناقصة: {count} مادة بلا سعر.", { name: label, count: n(cost.gaps.unpricedItems.length + cost.gaps.itemsWithoutPreferred.length) }))
     }
     switch (menuVerdict(cost, catalog.policy)) {
       case "unpriced":
-        at("error", "menu.unpriced", "menu", menu.id, M("قائمة «{name}» بلا سعر بيع للفرد.", { name: label }))
+        // Only a defect once the dishes are costed. Before that the missing
+        // price is a consequence, not a decision anyone got wrong.
+        if (uncosted === 0) {
+          at("error", "menu.unpriced", "menu", menu.id, M("قائمة «{name}» بلا سعر بيع للفرد.", { name: label }))
+        }
         break
       case "loss":
         at("error", "menu.loss", "menu", menu.id, M("قائمة «{name}» تُباع بأقل من تكلفتها ({cost} ر.س مقابل {price} ر.س).", { name: label, cost: n1(cost.perCover), price: n1(cost.pricePerCover ?? 0) }))

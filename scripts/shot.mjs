@@ -67,6 +67,27 @@ try {
 // React Flow lays out on a rAF after mount, and fitView animates for ~420ms.
 await new Promise((r) => setTimeout(r, 1200))
 
+/**
+ * Optional interaction before the shot: `CLICK="a,b"` clicks the first element
+ * whose text contains each term, in order.
+ *
+ * Accordion state lives in memory, not the URL, so an expanded canvas is only
+ * reachable by driving it — and an expanded canvas is exactly the state worth
+ * checking, since that is where the node count explodes.
+ */
+for (const term of (process.env.CLICK ?? "").split(",").filter(Boolean)) {
+  const hit = await page.evaluate((text) => {
+    const els = [...document.querySelectorAll("button, [role=button], a")]
+    const el = els.find((e) => e.textContent?.includes(text))
+    if (!el) return false
+    el.scrollIntoView()
+    el.click()
+    return true
+  }, term.trim())
+  if (!hit) problems.push(`click target not found: ${term.trim()}`)
+  await new Promise((r) => setTimeout(r, 900))
+}
+
 const summary = await page.evaluate(() => {
   const text = (sel) => document.querySelector(sel)?.textContent?.trim() ?? null
   return {

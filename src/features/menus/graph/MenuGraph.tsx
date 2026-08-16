@@ -22,13 +22,15 @@ import { useLocale } from "@/i18n/LocaleProvider"
 import { LOCALE_DIR } from "@/i18n/locale"
 import { ROOMY_CANVAS_QUERY, useMediaQuery } from "@/hooks/use-media-query"
 import { menuCost, recipeCost } from "@/engine/costing"
-import { pickName } from "@/lib/display"
+import { ServiceLine, type MenuCourseValue } from "@/engine/schemas"
+import { COURSE_ORDER, pickName } from "@/lib/display"
 import { cn } from "@/lib/utils"
 import {
   addMenu,
   pinNode,
   select,
   state,
+  toggleExpandedCourse,
   toggleExpandedMenu,
   unpinAll,
   unpinNode,
@@ -36,34 +38,36 @@ import {
 import { useCatalog, useIssues } from "@/store/use-issues"
 import {
   computeLayout,
+  groupNodeId,
   reconcileNodes,
   structureKeyOf,
-  tierNodeId,
   worldExtent,
-  TIER_ORDER,
   type LayoutSizes,
   type LayoutTree,
 } from "./layout"
 import {
+  COURSE_H,
+  COURSE_W,
   DISH_H,
   DISH_W,
+  LINE_H,
+  LINE_TINT,
+  LINE_W,
   MENU_H,
   MENU_W,
   ROOT_H,
   ROOT_W,
-  TIER_H,
-  TIER_TINT,
-  TIER_W,
   nodeTypes,
   type CatalogueData,
+  type CourseData,
   type DishData,
+  type LineData,
   type MenuNodeData,
-  type TierData,
   type Tint,
 } from "./nodes"
 
 /**
- * The menu catalogue as a tree: catalogue → tier → menu → dish.
+ * The menu catalogue as a tree: catalogue → service line → package → dish.
  *
  * Why a canvas at all, when the form says the same thing: a menu's cost is a
  * *composition*, and the question people actually bring to it — "which dish is
@@ -87,32 +91,36 @@ const WORLD_PAD = 400
 
 const SIZES: LayoutSizes = {
   root: { w: ROOT_W, h: ROOT_H },
-  tier: { w: TIER_W, h: TIER_H },
+  group: { w: LINE_W, h: LINE_H },
   menu: { w: MENU_W, h: MENU_H },
+  course: { w: COURSE_W, h: COURSE_H },
   dish: { w: DISH_W, h: DISH_H },
 }
 
 const boxOf = (id: string) =>
   id === "root"
     ? SIZES.root
-    : id.startsWith("tier_")
-      ? SIZES.tier
-      : id.startsWith("dish_")
-        ? SIZES.dish
-        : SIZES.menu
+    : id.startsWith("group_")
+      ? SIZES.group
+      : id.startsWith("course_")
+        ? SIZES.course
+        : id.startsWith("dish_")
+          ? SIZES.dish
+          : SIZES.menu
 
-/** Dish node ids are synthetic — a menu item has an id, but it is not unique-safe across menus. */
+/** Synthetic ids — a course is not an entity, and an item id is not unique across menus. */
+const courseNodeId = (menuId: string, course: string) => `course_${menuId}_${course}`
 const dishNodeId = (menuId: string, itemId: string) => `dish_${menuId}_${itemId}`
 
-type AnyData = CatalogueData | TierData | MenuNodeData | DishData
+type AnyData = CatalogueData | LineData | MenuNodeData | CourseData | DishData
 
 const tintVar = (t: Tint) => `var(--brand-${t})`
 
 interface Props {
   /** Fired when the user picks a menu — the host opens the form for it. */
   onMenuActivated?: (menuId: string) => void
-  /** Fired by a menu card's (+) — the host opens the dish picker. */
-  onAddDish?: (menuId: string) => void
+  /** Fired by a menu or section card's (+) — the host opens the dish picker. */
+  onAddDish?: (menuId: string, course?: MenuCourseValue) => void
 }
 
 function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
@@ -147,16 +155,34 @@ function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
    */
   const tree: LayoutTree = useMemo(
     () => ({
-      menus: state.menus.map((m) => ({
-        id: m.id,
-        tier: m.tier,
-        dishIds:
-          m.id === state.expandedMenuId ? m.items.map((i) => dishNodeId(m.id, i.id)) : [],
-      })),
+      // Ordered by the schema's own service-line order, so the sections come
+      // out the same way every time — the layout itself holds no opinion.
+      menus: [...state.menus]
+        .sort(
+          (a, b) =>
+            ServiceLine.options.indexOf(a.service_line) -
+            ServiceLine.options.indexOf(b.service_line),
+        )
+        .map((m) => ({
+          id: m.id,
+          group: m.service_line,
+          // Two accordion levels: the open package contributes its sections,
+          // and only the open section contributes dishes.
+          courses:
+            m.id === state.expandedMenuId
+              ? COURSE_ORDER.filter((c) => m.items.some((i) => i.course === c)).map((c) => ({
+                  id: courseNodeId(m.id, c),
+                  dishIds:
+                    state.expandedCourse === c
+                      ? m.items.filter((i) => i.course === c).map((i) => dishNodeId(m.id, i.id))
+                      : [],
+                }))
+              : [],
+        })),
       pinned: { ...state.pinned },
     }),
     // snap is the reactive trigger; we read the live proxy for the values.
-    [snap.menus, snap.pinned, snap.expandedMenuId],
+    [snap.menus, snap.pinned, snap.expandedMenuId, snap.expandedCourse],
   )
 
   const structureKey = useMemo(() => structureKeyOf(tree), [tree])
@@ -203,26 +229,26 @@ function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
       } satisfies CatalogueData,
     })
 
-    for (const tier of TIER_ORDER) {
-      const members = costed.filter((c) => c.menu.tier === tier)
+    for (const line of ServiceLine.options) {
+      const members = costed.filter((c) => c.menu.service_line === line)
       if (!members.length) continue
-      const id = tierNodeId(tier)
-      const tint = TIER_TINT[tier as keyof typeof TIER_TINT]
+      const id = groupNodeId(line)
+      const tint = LINE_TINT[line]
       nodes.push({
         id,
-        type: "tier",
+        type: "line",
         position: at(id),
-        width: TIER_W,
-        height: TIER_H,
+        width: LINE_W,
+        height: LINE_H,
         draggable: true,
         selectable: false,
         className: snap.pinned[id] ? "is-pinned" : undefined,
         data: {
-          tier: tier as TierData["tier"],
-          label: t(`tier.${tier}`),
+          line,
+          label: t(`line.${line}`),
           count: members.length,
-          onAdd: () => addMenu(tier as TierData["tier"]),
-        } satisfies TierData,
+          onAdd: () => addMenu(line),
+        } satisfies LineData,
       })
       edges.push({
         id: `root->${id}`,
@@ -237,7 +263,15 @@ function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
     }
 
     for (const { menu, cost } of costed) {
-      const tint = TIER_TINT[menu.tier]
+      const tint = LINE_TINT[menu.service_line]
+      const uncosted = menu.items.filter((i) => catalog.recipes.get(i.recipe)?.draft).length
+      const subtitle = [
+        menu.level !== null ? `${t("field.level")} ${menu.level}` : null,
+        menu.meal_period ? t(`meal.${menu.meal_period}`) : null,
+        menu.inclusions.length > 0 ? t("section.inclusions") : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
       nodes.push({
         id: menu.id,
         type: "menu",
@@ -249,9 +283,10 @@ function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
         className: snap.pinned[menu.id] ? "is-pinned" : undefined,
         data: {
           name: pickName(menu, locale),
-          tier: menu.tier,
-          mealLabel: t(`meal.${menu.meal_period}`),
+          line: menu.service_line,
+          subtitle,
           dishCount: menu.items.length,
+          uncosted,
           costPerCover: cost.perCover,
           pricePerCover: cost.pricePerCover,
           foodCostPct: cost.foodCostPct,
@@ -266,49 +301,94 @@ function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
         } satisfies MenuNodeData,
       })
       edges.push({
-        id: `${tierNodeId(menu.tier)}->${menu.id}`,
-        source: tierNodeId(menu.tier),
+        id: `${groupNodeId(menu.service_line)}->${menu.id}`,
+        source: groupNodeId(menu.service_line),
         target: menu.id,
         type: "smoothstep",
         style: { stroke: `color-mix(in srgb, ${tintVar(tint)} 55%, transparent)`, strokeWidth: 1.75 },
       })
 
       if (snap.expandedMenuId !== menu.id) continue
-      for (const item of menu.items) {
-        const recipe = snap.recipes.find((r) => r.id === item.recipe)
-        const perPortion = recipeCost(item.recipe, catalog).perPortion
-        const contribution = perPortion * item.portions_per_cover
-        const id = dishNodeId(menu.id, item.id)
+
+      /* ── the sections of the open package ─────────────────────── */
+      for (const course of COURSE_ORDER) {
+        const rows = menu.items.filter((i) => i.course === course)
+        if (!rows.length) continue
+        const courseId = courseNodeId(menu.id, course)
+        const sectionCost = rows.reduce(
+          (sum, i) => sum + recipeCost(i.recipe, catalog).perPortion * i.portions_per_cover,
+          0,
+        )
+        const open = snap.expandedCourse === course
         nodes.push({
-          id,
-          type: "dish",
-          position: at(id),
-          width: DISH_W,
-          height: DISH_H,
+          id: courseId,
+          type: "course",
+          position: at(courseId),
+          width: COURSE_W,
+          height: COURSE_H,
           draggable: true,
           selectable: true,
-          className: snap.pinned[id] ? "is-pinned" : undefined,
+          className: snap.pinned[courseId] ? "is-pinned" : undefined,
           data: {
-            name: recipe ? pickName(recipe, locale) : item.recipe,
-            station: recipe?.station ?? "assembly",
-            stationLabel: recipe ? t(`station.${recipe.station}`) : "—",
-            portionsPerCover: item.portions_per_cover,
-            costPerCover: contribution,
-            sharePct: cost.rawPerCover > 0 ? (contribution / cost.rawPerCover) * 100 : 0,
-            selected: snap.selectedId === id,
-            pinned: Boolean(snap.pinned[id]),
-            invalid: !recipe,
-          } satisfies DishData,
+            label: t(`course.${course}`),
+            dishCount: rows.length,
+            uncosted: rows.filter((i) => catalog.recipes.get(i.recipe)?.draft).length,
+            costPerCover: sectionCost,
+            sharePct: cost.rawPerCover > 0 ? (sectionCost / cost.rawPerCover) * 100 : 0,
+            expanded: open,
+            selected: snap.selectedId === courseId,
+            pinned: Boolean(snap.pinned[courseId]),
+            onToggle: () => toggleExpandedCourse(course),
+            onAdd: () => onAddDish?.(menu.id, course),
+          } satisfies CourseData,
         })
         edges.push({
-          id: `${menu.id}->${id}`,
+          id: `${menu.id}->${courseId}`,
           source: menu.id,
-          target: id,
+          target: courseId,
           type: "smoothstep",
-          // Neutral, not the tier tint: dish edges belong to the recipe family,
-          // and a tinted line blended into the gradient cards.
-          style: { stroke: "color-mix(in srgb, black 35%, transparent)", strokeWidth: 1.5 },
+          style: { stroke: `color-mix(in srgb, ${tintVar(tint)} 45%, transparent)`, strokeWidth: 1.5 },
         })
+
+        /* ── the dishes of the open section ─────────────────────── */
+        if (!open) continue
+        for (const item of rows) {
+          const recipe = snap.recipes.find((r) => r.id === item.recipe)
+          const perPortion = recipeCost(item.recipe, catalog).perPortion
+          const contribution = perPortion * item.portions_per_cover
+          const id = dishNodeId(menu.id, item.id)
+          nodes.push({
+            id,
+            type: "dish",
+            position: at(id),
+            width: DISH_W,
+            height: DISH_H,
+            draggable: true,
+            selectable: true,
+            className: snap.pinned[id] ? "is-pinned" : undefined,
+            data: {
+              name: recipe ? pickName(recipe, locale) : item.recipe,
+              station: recipe?.station ?? "assembly",
+              stationLabel: recipe ? t(`station.${recipe.station}`) : "—",
+              portionsPerCover: item.portions_per_cover,
+              costPerCover: contribution,
+              sharePct: sectionCost > 0 ? (contribution / sectionCost) * 100 : 0,
+              uncosted: Boolean(recipe?.draft),
+              selected: snap.selectedId === id,
+              pinned: Boolean(snap.pinned[id]),
+              invalid: !recipe,
+            } satisfies DishData,
+          })
+          edges.push({
+            id: `${courseId}->${id}`,
+            source: courseId,
+            target: id,
+            type: "smoothstep",
+            // Neutral, not the line tint: dish edges belong to the recipe
+            // family, and a tinted line blended into the gradient cards.
+            style: { stroke: "color-mix(in srgb, black 35%, transparent)", strokeWidth: 1.5 },
+          })
+        }
       }
     }
 
@@ -345,7 +425,7 @@ function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
    * canvas. One rule: frame the open branch. Collapsing leaves the viewport
    * where the user is.
    */
-  const shape = `${snap.menus.length}:${snap.menus.map((m) => m.items.length).join(",")}:${snap.expandedMenuId ?? ""}`
+  const shape = `${snap.menus.length}:${snap.menus.map((m) => m.items.length).join(",")}:${snap.expandedMenuId ?? ""}:${snap.expandedCourse ?? ""}`
   const lastShape = useRef<string | null>(null)
   const pendingFocus = useRef<"all" | string | null>(null)
   useEffect(() => {
@@ -373,7 +453,18 @@ function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
 
     const menu = state.menus.find((m) => m.id === target)
     if (!menu) return
-    const ids = [target, ...menu.items.map((i) => dishNodeId(target, i.id))]
+    // Frame the package with its sections, and the open section's dishes —
+    // never every dish in the package, most of which are not drawn.
+    const openCourse = state.expandedCourse
+    const ids = [
+      target,
+      ...COURSE_ORDER.filter((c) => menu.items.some((i) => i.course === c)).map((c) =>
+        courseNodeId(target, c),
+      ),
+      ...(openCourse
+        ? menu.items.filter((i) => i.course === openCourse).map((i) => dishNodeId(target, i.id))
+        : []),
+    ]
     const present = new Set(nodes.map((n) => n.id))
     if (!ids.every((id) => present.has(id))) return // not committed yet
 
@@ -454,7 +545,7 @@ function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
         nodeDragThreshold={TAP_SLOP}
         onNodeClick={(_e, n) => {
           // Tier nodes are derived grouping chrome — nothing to inspect.
-          if (n.id.startsWith("tier_")) return
+          if (n.id.startsWith("group_")) return
           select(n.id)
           if (snap.menus.some((m) => m.id === n.id)) onMenuActivated?.(n.id)
         }}
@@ -530,8 +621,8 @@ function MenuGraphInner({ onMenuActivated, onAddDish }: Props) {
             nodeStrokeWidth={0}
             nodeColor={(n) => {
               if (n.type === "catalogue") return "var(--brand-navy)"
-              if (n.type === "tier") return tintVar(TIER_TINT[(n.data as TierData).tier])
-              if (n.type === "menu") return tintVar(TIER_TINT[(n.data as MenuNodeData).tier])
+              if (n.type === "line") return tintVar(LINE_TINT[(n.data as LineData).line])
+              if (n.type === "menu") return tintVar(LINE_TINT[(n.data as MenuNodeData).line])
               return "var(--brand-stone)"
             }}
             maskColor="rgba(19,39,63,0.06)"

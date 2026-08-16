@@ -8,7 +8,7 @@ import { ResponsivePanel } from "@/components/ui/responsive-panel"
 import { useLocale } from "@/i18n/LocaleProvider"
 import { recipeCost } from "@/engine/costing"
 import { money, pickName } from "@/lib/display"
-import type { StationValue } from "@/engine/schemas"
+import type { MenuCourseValue, StationValue } from "@/engine/schemas"
 import { addMenuItem, state } from "@/store/ops"
 import { useCatalog } from "@/store/use-issues"
 
@@ -23,10 +23,13 @@ import { useCatalog } from "@/store/use-issues"
  */
 export function AddDishSheet({
   menuId,
+  course,
   open,
   onOpenChange,
 }: {
   menuId: string | null
+  /** The section the dish is being added into. */
+  course: MenuCourseValue
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -62,7 +65,7 @@ export function AddDishSheet({
     // One portion per cover is the common case; fractions (a shared mezze, a
     // salad half the room takes) are set on the card, where the running food
     // cost is visible.
-    addMenuItem(menuId, recipeId, 1)
+    addMenuItem(menuId, recipeId, course, 1)
     setQuery("")
     onOpenChange(false)
   }
@@ -74,7 +77,9 @@ export function AddDishSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={t("action.add_dish")}
-      description={menu ? pickName(menu, locale) : undefined}
+      description={
+        menu ? `${pickName(menu, locale)} · ${t(`course.${course}`)}` : t(`course.${course}`)
+      }
     >
       <div className="border-b border-surface-line p-3">
         <div className="relative">

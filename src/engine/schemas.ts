@@ -5,7 +5,7 @@ import { z } from "zod"
  *
  * Scope is the raw-to-menu chain and the stock behind it — nothing else:
  *
- *   supplier → ingredient → recipe ⇄ sub-recipe → menu
+ *   supplier → item → variant → recipe ⇄ sub-recipe → menu → package
  *
  * Every field here exists because some downstream calculation needs it; see
  * `docs/catering-engine.md` for the sourcing of each rule. Anything a caterer
@@ -75,8 +75,37 @@ export type ServiceTempValue = z.infer<typeof ServiceTemp>
 export const MealPeriod = z.enum(["breakfast", "lunch", "dinner", "snack"])
 export type MealPeriodValue = z.infer<typeof MealPeriod>
 
-export const MenuTier = z.enum(["economy", "standard", "premium"])
-export type MenuTierValue = z.infer<typeof MenuTier>
+/**
+ * How the food reaches the guest.
+ *
+ * Not four styles of one thing — each is its own production and handling chain
+ * (see `docs/source/company-profile.md`), which is why it is a field rather
+ * than a note. Frozen in particular runs pack → store → thaw → reheat, and dry
+ * skips refrigeration entirely.
+ */
+export const ServiceLine = z.enum(["buffet", "traditional", "frozen", "dry", "station"])
+export type ServiceLineValue = z.infer<typeof ServiceLine>
+
+/**
+ * Where a dish sits on the buffet.
+ *
+ * The sections the packages are actually written in — see
+ * `docs/source/buffet-packages.md`. This is a *menu* concern, not a kitchen
+ * one: the same dish can be a main in one package and part of a station in
+ * another, so the course lives on the menu item and `Station` stays on the
+ * recipe.
+ */
+export const MenuCourse = z.enum([
+  "cold_appetiser",
+  "hot_appetiser",
+  "main",
+  "dessert",
+  "bread",
+  "beverage",
+  /** The box, tray or wrap. Not a dish, but a real cost on every boxed cover. */
+  "packaging",
+])
+export type MenuCourseValue = z.infer<typeof MenuCourse>
 
 /* ── suppliers ──────────────────────────────────────────────────── */
 
@@ -211,6 +240,15 @@ export const Recipe = z.object({
   prep_minutes: z.number().nonnegative(),
   /** Hours the finished product may be held before service. */
   shelf_life_hours: z.number().positive(),
+  /**
+   * A name imported from the catalogue that nobody has costed yet.
+   *
+   * The company lists ~120 dishes; most of them exist as a name on a package
+   * long before anyone writes the bill of materials. A draft with no lines is
+   * honest incomplete data, so it warns; a *non*-draft with no lines is a
+   * recipe someone emptied, which blocks.
+   */
+  draft: z.boolean(),
   lines: z.array(RecipeLine),
 })
 export type Recipe = z.infer<typeof Recipe>
@@ -220,6 +258,8 @@ export type Recipe = z.infer<typeof Recipe>
 export const MenuItem = z.object({
   id: z.string(),
   recipe: z.string(),
+  /** Which section of the buffet this dish is laid out in. */
+  course: MenuCourse,
   /**
    * Portions of this dish per cover. Fractional on purpose: a shared mezze
    * plate between four is 0.25, and a buffet salad that half the room takes
@@ -233,9 +273,28 @@ export const Menu = z.object({
   id: z.string(),
   name_ar: z.string(),
   name_en: z.string(),
-  tier: MenuTier,
-  meal_period: MealPeriod,
+  service_line: ServiceLine,
+  /**
+   * Package number, 1–4, ascending in richness — the ladder the buffet
+   * packages are actually sold on. Null for anything that is not a numbered
+   * package, such as the whole-lamb station.
+   *
+   * Replaces an economy/standard/premium tier, which was invented: the real
+   * range has four levels and they are named by number.
+   */
+  level: z.number().int().min(1).nullable(),
+  /**
+   * Null where the package is not tied to one — a buffet package is sold by
+   * occasion, not by breakfast/lunch/dinner. Hotel catering does use it.
+   */
+  meal_period: MealPeriod.nullable(),
   items: z.array(MenuItem),
+  /**
+   * Non-food service inclusions: tables, tablecloths, cutlery, napkins,
+   * towels. Free text because they are quoted as a list, not costed as a bill
+   * of materials — the whole-lamb station is defined almost entirely by these.
+   */
+  inclusions: z.array(z.string()),
   /** What one cover sells for, before VAT. Null = not priced yet. */
   price_per_cover_sar: z.number().nonnegative().nullable(),
 })

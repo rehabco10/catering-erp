@@ -2,14 +2,19 @@
  * Canvas layout, kept pure and free of React.
  *
  * A deterministic sideways grid rather than a solver: catalogue root on the
- * start edge, tier sections stacked down, menus flowing across, and the one
- * expanded menu's dishes in a band beside it. Horizontal because the chain
- * *is* a sequence — menu, then what is in it — and screens are wide.
+ * start edge, group sections stacked down, then packages, then the sections of
+ * the open package, then the dishes of the open section. Horizontal because the
+ * chain *is* a sequence, and screens are wide.
  *
- * Deliberately simpler than the wizard's version it is modelled on. That one
- * wraps columns at seven because a real season carries 39 packages; a menu
- * catalogue is a handful per tier, so wrapping would be machinery with nothing
- * to do.
+ * Five ranks, and the last two are why. A transcribed buffet package carries up
+ * to 81 dishes; hanging those off the package directly put 81 cards on the
+ * canvas at once, which is not a graph, it is a wall. The course rank collapses
+ * that to five section cards, and only one section's dishes are drawn — so the
+ * widest the tree ever gets is one package's biggest section.
+ *
+ * The module knows no domain vocabulary: groups and courses are opaque strings
+ * ordered by the caller. It used to carry a hardcoded tier order, which meant a
+ * pure geometry module had an opinion about the catalogue.
  */
 
 export interface Pos {
@@ -23,30 +28,43 @@ export interface Box {
 }
 
 export interface LayoutTree {
-  /** Menus in display order, each with the dishes it should contribute. */
-  menus: Array<{ id: string; tier: string; dishIds: string[] }>
+  menus: Array<{
+    id: string
+    group: string
+    /** Section nodes to draw for this menu — empty unless it is the open one. */
+    courses: Array<{ id: string; dishIds: string[] }>
+  }>
   /** Nodes the user has dragged; these override the solver's position. */
   pinned: Record<string, Pos>
 }
 
 export interface LayoutSizes {
   root: Box
-  tier: Box
+  group: Box
   menu: Box
+  course: Box
   dish: Box
 }
 
 export const ROOT_ID = "root"
-/** Fixed display order; unknown tiers append after. */
-export const TIER_ORDER = ["premium", "standard", "economy"]
-export const tierNodeId = (tier: string) => `tier_${tier}`
+export const groupNodeId = (group: string) => `group_${group}`
 
 const MARGIN = 40
 const GAP_Y = 24
 const RANK_GAP = 84
-const DISH_DROP = 52
-const DISH_GAP_Y = 14
+const BRANCH_GAP = 52
+const BAND_GAP_Y = 14
 const SECTION_GAP = 64
+/** Dish chips are small and there can be 28 of them; they get their own gap. */
+const DISH_GAP_Y = 8
+/**
+ * Dishes per column before wrapping.
+ *
+ * A 28-dish section in one column is a 1,300px drop that has to be panned; in
+ * columns of twelve it is three short stacks the eye takes in at once. The
+ * chips are narrow enough that the extra width costs less than the height did.
+ */
+const DISH_WRAP_AT = 12
 
 export function computeLayout(tree: LayoutTree, sizes: LayoutSizes): Map<string, Pos> {
   const out = new Map<string, Pos>()
@@ -55,49 +73,90 @@ export function computeLayout(tree: LayoutTree, sizes: LayoutSizes): Map<string,
     out.set(id, pin ? { x: pin.x, y: pin.y } : { x, y })
   }
 
-  const byTier = new Map<string, LayoutTree["menus"]>()
+  // Sections come out in the order the caller listed the menus.
+  const byGroup = new Map<string, LayoutTree["menus"]>()
   for (const menu of tree.menus) {
-    const list = byTier.get(menu.tier) ?? []
+    const list = byGroup.get(menu.group) ?? []
     list.push(menu)
-    byTier.set(menu.tier, list)
+    byGroup.set(menu.group, list)
   }
-  const tiers = [
-    ...TIER_ORDER.filter((t) => byTier.has(t)),
-    ...[...byTier.keys()].filter((t) => !TIER_ORDER.includes(t)),
-  ]
+  const groups = [...byGroup.keys()]
 
   const sectionH = (count: number) =>
     Math.max(1, count) * sizes.menu.h + Math.max(0, count - 1) * GAP_Y
 
   const totalH =
-    tiers.reduce((t, tier) => t + sectionH(byTier.get(tier)!.length), 0) +
-    Math.max(0, tiers.length - 1) * SECTION_GAP
+    groups.reduce((t, g) => t + sectionH(byGroup.get(g)!.length), 0) +
+    Math.max(0, groups.length - 1) * SECTION_GAP
 
   place(ROOT_ID, MARGIN, MARGIN + Math.max(totalH, sizes.root.h) / 2 - sizes.root.h / 2)
 
-  const tierX = MARGIN + sizes.root.w + RANK_GAP
-  const menuX = tierX + sizes.tier.w + RANK_GAP
-  const dishX = menuX + sizes.menu.w + DISH_DROP
+  const groupX = MARGIN + sizes.root.w + RANK_GAP
+  const menuX = groupX + sizes.group.w + RANK_GAP
+  const courseX = menuX + sizes.menu.w + BRANCH_GAP
+  const dishX = courseX + sizes.course.w + BRANCH_GAP
+
+  /** Stack `ids` in a vertical band centred on `centre`, never above `floor`. */
+  const band = (ids: string[], x: number, box: Box, centre: number, floor: number) => {
+    if (!ids.length) return floor
+    const h = ids.length * box.h + (ids.length - 1) * BAND_GAP_Y
+    const top = Math.max(centre - h / 2, floor + BAND_GAP_Y)
+    ids.forEach((id, i) => place(id, x, top + i * (box.h + BAND_GAP_Y)))
+    return top + h
+  }
+
+  /** Same, but wrapping into columns — for the one band that gets long. */
+  const wrapped = (ids: string[], x: number, box: Box, centre: number, floor: number) => {
+    if (!ids.length) return floor
+    const rows = Math.min(DISH_WRAP_AT, ids.length)
+    const h = rows * box.h + (rows - 1) * DISH_GAP_Y
+    const top = Math.max(centre - h / 2, floor + BAND_GAP_Y)
+    ids.forEach((id, i) => {
+      const col = Math.floor(i / DISH_WRAP_AT)
+      const row = i % DISH_WRAP_AT
+      place(id, x + col * (box.w + 16), top + row * (box.h + DISH_GAP_Y))
+    })
+    return top + h
+  }
 
   let sectionTop = MARGIN
-  for (const tier of tiers) {
-    const menus = byTier.get(tier)!
+  for (const group of groups) {
+    const menus = byGroup.get(group)!
     const secH = sectionH(menus.length)
-    place(tierNodeId(tier), tierX, sectionTop + secH / 2 - sizes.tier.h / 2)
+    place(groupNodeId(group), groupX, sectionTop + secH / 2 - sizes.group.h / 2)
 
-    // The dish band walks down with a cursor so an expanded menu's dishes can
-    // never overlap the menu card below it, however many dishes it holds.
-    let cursor = -Infinity
+    // Cursors walk down so an expanded branch can never overlap the card below
+    // it, however many sections or dishes it holds.
+    let courseCursor = -Infinity
+    let dishCursor = -Infinity
+
     menus.forEach((menu, i) => {
       const y = sectionTop + i * (sizes.menu.h + GAP_Y)
       place(menu.id, menuX, y)
-      if (!menu.dishIds.length) return
-      const bandH =
-        menu.dishIds.length * sizes.dish.h + (menu.dishIds.length - 1) * DISH_GAP_Y
+      if (!menu.courses.length) return
+
       const centre = y + sizes.menu.h / 2
-      const bandY = Math.max(centre - bandH / 2, cursor + DISH_GAP_Y)
-      menu.dishIds.forEach((id, j) => place(id, dishX, bandY + j * (sizes.dish.h + DISH_GAP_Y)))
-      cursor = bandY + bandH
+      courseCursor = band(
+        menu.courses.map((c) => c.id),
+        courseX,
+        sizes.course,
+        centre,
+        courseCursor,
+      )
+
+      // Only one section is ever open, so at most one dish band is drawn.
+      for (const course of menu.courses) {
+        if (!course.dishIds.length) continue
+        const at = out.get(course.id)
+        if (!at) continue
+        dishCursor = wrapped(
+          course.dishIds,
+          dishX,
+          sizes.dish,
+          at.y + sizes.course.h / 2,
+          dishCursor,
+        )
+      }
     })
 
     sectionTop += secH + SECTION_GAP
@@ -108,7 +167,9 @@ export function computeLayout(tree: LayoutTree, sizes: LayoutSizes): Map<string,
 
 /** A stable key for "has the tree's shape or pinning changed?". */
 export function structureKeyOf(tree: LayoutTree): string {
-  const shape = tree.menus.map((m) => `${m.id}~${m.tier}:${m.dishIds.join("|")}`).join(";")
+  const shape = tree.menus
+    .map((m) => `${m.id}~${m.group}:${m.courses.map((c) => `${c.id}[${c.dishIds.join(",")}]`).join("|")}`)
+    .join(";")
   const pins = Object.entries(tree.pinned)
     .map(([k, v]) => `${k}@${v.x},${v.y}`)
     .sort()

@@ -2,7 +2,16 @@ import { proxy } from "valtio"
 
 import type { Catalog } from "@/engine/costing"
 import { menuCost } from "@/engine/costing"
-import type { Item, ItemVariant, Menu, Policy, Recipe, Supplier } from "@/engine/schemas"
+import type {
+  Item,
+  ItemVariant,
+  Menu,
+  MenuCourseValue,
+  MenuItem,
+  Policy,
+  Recipe,
+  Supplier,
+} from "@/engine/schemas"
 import { validateCatalogue, type Issue } from "@/engine/validation"
 import {
   SEED_ITEMS,
@@ -38,11 +47,18 @@ export interface OpsState {
   /** Node currently inspected — a menu id, a dish id, or `"root"`. */
   selectedId: string
   /**
-   * The one menu whose dishes render on the canvas — accordion, not a set.
-   * Every menu's dishes at once is a smear at fit-view zoom, and the tree
-   * reads as menu cards with one branch open.
+   * The one menu whose *sections* render on the canvas — accordion, not a set.
    */
   expandedMenuId: string | null
+  /**
+   * The one section, within that menu, whose dishes render.
+   *
+   * Two levels of accordion rather than one, because a transcribed package
+   * carries up to 81 dishes: opening a package shows five section cards, and
+   * opening a section shows only that section's dishes. The widest the canvas
+   * ever gets is one section.
+   */
+  expandedCourse: MenuCourseValue | null
   /** Nodes the user has dragged; re-layout leaves these alone. */
   pinned: Record<string, { x: number; y: number }>
 }
@@ -56,6 +72,7 @@ export const state = proxy<OpsState>({
   menus: SEED_MENUS,
   selectedId: "root",
   expandedMenuId: null,
+  expandedCourse: null,
   pinned: {},
 })
 
@@ -243,7 +260,17 @@ export function select(id: string) {
 
 /** Accordion toggle: open this menu's branch, closing whichever was open. */
 export function toggleExpandedMenu(id: string) {
-  state.expandedMenuId = state.expandedMenuId === id ? null : id
+  const opening = state.expandedMenuId !== id
+  state.expandedMenuId = opening ? id : null
+  // Switching packages closes the open section too: a section belongs to the
+  // package it came from, and leaving it open would draw another package's
+  // dishes under the same heading.
+  state.expandedCourse = null
+}
+
+/** Accordion toggle for the section rank, within the open menu. */
+export function toggleExpandedCourse(course: MenuCourseValue) {
+  state.expandedCourse = state.expandedCourse === course ? null : course
 }
 
 export function pinNode(id: string, x: number, y: number) {
@@ -265,16 +292,18 @@ export function unpinAll() {
  * into it, so quoting before composing is the mistake the whole page exists to
  * prevent.
  */
-export function addMenu(tier: Menu["tier"] = "standard", meal: Menu["meal_period"] = "lunch"): string {
+export function addMenu(line: Menu["service_line"] = "buffet"): string {
   const id = nextId("menu")
-  const n = state.menus.filter((m) => m.tier === tier).length + 1
+  const n = state.menus.filter((m) => m.service_line === line).length + 1
   state.menus.push({
     id,
     name_ar: `قائمة ${n}`,
     name_en: `Menu ${n}`,
-    tier,
-    meal_period: meal,
+    service_line: line,
+    level: null,
+    meal_period: null,
     items: [],
+    inclusions: [],
     price_per_cover_sar: null,
   })
   state.selectedId = id
@@ -282,10 +311,15 @@ export function addMenu(tier: Menu["tier"] = "standard", meal: Menu["meal_period
   return id
 }
 
-export function addMenuItem(menuId: string, recipeId: string, portionsPerCover = 1) {
+export function addMenuItem(
+  menuId: string,
+  recipeId: string,
+  course: MenuItem["course"],
+  portionsPerCover = 1,
+) {
   const menu = menuById(menuId)
   if (!menu || menu.items.some((i) => i.recipe === recipeId)) return
-  menu.items.push({ id: nextId("mi"), recipe: recipeId, portions_per_cover: portionsPerCover })
+  menu.items.push({ id: nextId("mi"), recipe: recipeId, course, portions_per_cover: portionsPerCover })
 }
 
 export function removeMenuItem(menuId: string, itemId: string) {

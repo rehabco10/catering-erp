@@ -143,6 +143,28 @@ export const SEED_ITEMS: Item[] = [
   // dairy, second wave
   item("it_milk", "حليب", "Milk", "dairy", "l", 120, "v_milk", { allergens: ["dairy"] }),
   item("it_qishta", "قشطة", "Qishta", "dairy", "kg", 25, "v_qishta", { allergens: ["dairy"] }),
+  // ── patisserie ──────────────────────────────────────────────────
+  // The dessert sections are ~20 dishes per package and none of them could be
+  // costed on the savoury catalogue: a cake is flour, sugar, egg, butter and
+  // *whipping* cream, and a cheesecake is none of the above.
+  item("it_whipcream", "كريمة خفق", "Whipping cream", "dairy", "l", 60, "v_whipcream", { allergens: ["dairy"] }),
+  item("it_creamcheese", "جبن كريمي", "Cream cheese", "dairy", "kg", 30, "v_creamcheese", { allergens: ["dairy"] }),
+  item("it_mascarpone", "جبن ماسكربوني", "Mascarpone", "dairy", "kg", 12, "v_mascarpone", { allergens: ["dairy"] }),
+  item("it_choc", "شوكولاتة داكنة", "Dark chocolate", "dry_goods", "kg", 25, "v_choc", { allergens: ["soy"] }),
+  item("it_cocoa", "كاكاو بودرة", "Cocoa powder", "dry_goods", "kg", 8, "v_cocoa"),
+  item("it_gelatin", "جيلاتين", "Gelatin", "dry_goods", "kg", 4, "v_gelatin"),
+  item("it_jellypowder", "مسحوق جيلي", "Jelly powder", "dry_goods", "kg", 10, "v_jellypowder"),
+  item("it_cornflour", "نشا", "Cornflour", "dry_goods", "kg", 15, "v_cornflour"),
+  item("it_icingsugar", "سكر بودرة", "Icing sugar", "dry_goods", "kg", 20, "v_icingsugar"),
+  item("it_almondflour", "لوز مطحون", "Almond flour", "dry_goods", "kg", 8, "v_almondflour", { allergens: ["nuts"] }),
+  item("it_pistachio", "فستق", "Pistachio", "dry_goods", "kg", 10, "v_pistachio", { allergens: ["nuts"] }),
+  item("it_coffee", "قهوة إسبريسو", "Espresso coffee", "beverage", "kg", 6, "v_coffee"),
+  item("it_biscuit", "بسكويت دايجستيف", "Digestive biscuit", "bakery", "kg", 20, "v_biscuit", { allergens: ["gluten", "dairy"] }),
+  item("it_ladyfinger", "أصابع السيدة", "Ladyfingers", "bakery", "kg", 10, "v_ladyfinger", { allergens: ["gluten", "egg"] }),
+  item("it_puff", "عجينة بف باستري", "Puff pastry", "bakery", "kg", 20, "v_puff", { allergens: ["gluten"] }),
+  item("it_strawberry", "فراولة", "Strawberry", "produce", "kg", 15, "v_strawberry"),
+  item("it_cherry", "كرز", "Cherries", "produce", "kg", 10, "v_cherry"),
+  item("it_fruitmix", "فواكه مشكلة", "Mixed fruit", "produce", "kg", 60, "v_fruitmix"),
   // bakery, beverage, disposables
   item("it_bread", "خبز عربي", "Arabic bread", "bakery", "ea", 1200, "v_bread", { allergens: ["gluten"] }),
   item("it_kunafa", "عجينة كنافة", "Kunafa dough", "bakery", "kg", 30, "v_kunafa", { allergens: ["gluten"] }),
@@ -258,6 +280,25 @@ export const SEED_VARIANTS: ItemVariant[] = [
   // ── dairy, second wave ──────────────────────────────────────────
   variant("v_milk", "it_milk", "كرتون ١٢ لتر", "12 L case", "sup_dairy", "case", 12, 66, 100, "chilled", 144), // estimated
   variant("v_qishta", "it_qishta", "كرتون ٦ كجم", "6 kg case", "sup_dairy", "case", 6, 165, 100, "chilled", 28), // estimated
+  // ── patisserie ──────────────────────────────────────────────────
+  variant("v_whipcream", "it_whipcream", "كرتون ١٢ لتر", "12 L case", "sup_dairy", "case", 12, 168, 100, "chilled", 72), // estimated
+  variant("v_creamcheese", "it_creamcheese", "كرتون ٥ كجم", "5 kg case", "sup_dairy", "case", 5, 145, 100, "chilled", 32), // estimated
+  variant("v_mascarpone", "it_mascarpone", "كرتون ٢ كجم", "2 kg case", "sup_dairy", "case", 2, 92, 100, "chilled", 10), // estimated
+  variant("v_choc", "it_choc", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 210, 100, "dry", 28), // estimated
+  variant("v_cocoa", "it_cocoa", "كجم", "1 kg", "sup_dry", "kg", 1, 38, 100, "dry", 9), // estimated
+  variant("v_gelatin", "it_gelatin", "كجم", "1 kg", "sup_dry", "kg", 1, 85, 100, "dry", 5), // estimated
+  variant("v_jellypowder", "it_jellypowder", "كجم", "1 kg", "sup_dry", "kg", 1, 22, 100, "dry", 12), // estimated
+  variant("v_cornflour", "it_cornflour", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 28, 100, "dry", 18), // estimated
+  variant("v_icingsugar", "it_icingsugar", "كيس ٥ كجم", "5 kg sack", "sup_dry", "sack", 5, 32, 100, "dry", 22), // estimated
+  variant("v_almondflour", "it_almondflour", "كجم", "1 kg", "sup_dry", "kg", 1, 62, 100, "dry", 9), // estimated
+  variant("v_pistachio", "it_pistachio", "كجم", "1 kg", "sup_dry", "kg", 1, 145, 100, "dry", 11), // estimated
+  variant("v_coffee", "it_coffee", "كجم", "1 kg", "sup_dairy", "kg", 1, 95, 100, "dry", 7), // estimated
+  variant("v_biscuit", "it_biscuit", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 68, 100, "dry", 22), // estimated
+  variant("v_ladyfinger", "it_ladyfinger", "كرتون ٣ كجم", "3 kg case", "sup_dry", "case", 3, 72, 100, "dry", 11), // estimated
+  variant("v_puff", "it_puff", "كرتون ٥ كجم", "5 kg case", "sup_dry", "case", 5, 78, 100, "frozen", 22), // estimated
+  variant("v_strawberry", "it_strawberry", "صندوق ٢ كجم", "2 kg punnet box", "sup_produce", "box", 2, 34, 90, "chilled", 16), // estimated
+  variant("v_cherry", "it_cherry", "كرتون ٣ كجم", "3 kg case", "sup_produce", "case", 3, 78, 95, "chilled", 11), // estimated
+  variant("v_fruitmix", "it_fruitmix", "كرتون ١٠ كجم", "10 kg case", "sup_produce", "case", 10, 145, 72, "chilled", 65), // estimated
   // ── bakery, beverage, disposables ───────────────────────────────
   // Unpriced on purpose — anything built on bread costs light until this is filled in.
   variant("v_bread", "it_bread", "صينية ١٠٠ رغيف", "Tray of 100", "sup_dry", "tray", 100, null, 100, "dry", 800),
@@ -338,6 +379,37 @@ const COSTED: Record<string, Array<[string, number]>> = {
   "كنافة بالقشطة": [["it_kunafa", 2.5], ["it_qishta", 2], ["it_butter", 1], ["it_sugar", 1.5]],
   "أم علي": [["it_filo", 1.5], ["it_milk", 4], ["it_cream", 1], ["it_nuts", 0.5], ["it_sugar", 0.8]],
   "بودينج الأرز": [["it_rice", 1.2], ["it_milk", 5], ["it_sugar", 0.8], ["it_cream", 0.5]],
+  رموش: [["it_filo", 1.8], ["it_nuts", 1.2], ["it_butter", 1], ["it_sugar", 1.4]],
+  "حلوة الجبن": [["it_cheese", 2.5], ["it_semolina", 1], ["it_sugar", 1.2], ["it_qishta", 0.8]],
+
+  /* ── patisserie ──────────────────────────────────────────────── */
+  // A sponge is flour + sugar + egg + butter; a gateau is that plus whipped
+  // cream and its fruit. Cheesecake is a biscuit base, cream cheese and
+  // gelatin. Tiramisu is ladyfingers soaked in espresso under mascarpone,
+  // egg yolk and sugar. Mousse is dark chocolate, cream and egg.
+  جلي: [["it_jellypowder", 0.9], ["it_sugar", 0.3], ["it_fruitmix", 1]],
+  "تورتة الغابة السوداء": [["it_flour", 1.2], ["it_sugar", 1.2], ["it_egg", 20], ["it_cocoa", 0.35], ["it_butter", 0.6], ["it_whipcream", 2.5], ["it_cherry", 1.2]],
+  "تورتة فراولة": [["it_flour", 1.2], ["it_sugar", 1.1], ["it_egg", 20], ["it_butter", 0.6], ["it_whipcream", 2.5], ["it_strawberry", 1.5]],
+  "تورتة فواكة": [["it_flour", 1.2], ["it_sugar", 1.1], ["it_egg", 20], ["it_butter", 0.6], ["it_whipcream", 2.2], ["it_fruitmix", 2]],
+  "تشيز كيك": [["it_biscuit", 1.2], ["it_butter", 0.6], ["it_creamcheese", 2.5], ["it_sugar", 0.8], ["it_gelatin", 0.06], ["it_whipcream", 1]],
+  تيراميسو: [["it_ladyfinger", 1.2], ["it_mascarpone", 2], ["it_egg", 12], ["it_sugar", 0.7], ["it_coffee", 0.12], ["it_cocoa", 0.08]],
+  موس: [["it_choc", 1.5], ["it_whipcream", 2.5], ["it_egg", 16], ["it_sugar", 0.5]],
+  بانكوتا: [["it_whipcream", 3], ["it_milk", 1.5], ["it_sugar", 0.7], ["it_gelatin", 0.07]],
+  اكلير: [["it_flour", 0.9], ["it_butter", 0.7], ["it_egg", 18], ["it_milk", 2], ["it_sugar", 0.6], ["it_choc", 0.5], ["it_cornflour", 0.15]],
+  ميلفيه: [["it_puff", 2.2], ["it_milk", 2.5], ["it_egg", 12], ["it_sugar", 0.7], ["it_cornflour", 0.25], ["it_icingsugar", 0.2]],
+  ماكرون: [["it_almondflour", 1.4], ["it_icingsugar", 1.4], ["it_egg", 14], ["it_sugar", 0.5], ["it_butter", 0.5], ["it_choc", 0.3]],
+  تارت: [["it_flour", 1.3], ["it_butter", 0.9], ["it_icingsugar", 0.4], ["it_egg", 6], ["it_milk", 1.5], ["it_cornflour", 0.15], ["it_fruitmix", 1.5]],
+  "كيكة الفستق": [["it_flour", 1.2], ["it_sugar", 1.1], ["it_egg", 20], ["it_butter", 0.7], ["it_pistachio", 0.8], ["it_whipcream", 1.5]],
+  "اكواب الشوكلاتة": [["it_choc", 1.6], ["it_whipcream", 2], ["it_milk", 1], ["it_sugar", 0.4]],
+  // Fruit displays are the fruit and nothing else — the labour is the dish.
+  "سلة فواكه": [["it_fruitmix", 5.5]],
+  "سلة فواكه موسمية واستوائية": [["it_fruitmix", 6]],
+  "شلال فواكه": [["it_fruitmix", 6.5]],
+
+  /* ── bread ───────────────────────────────────────────────────── */
+  // 100 portions per batch, not 50 — the bread section's batch yield.
+  "سلة متنوعة من الخبز العربي والإيطالي": [["it_bread", 100], ["it_butter", 0.6]],
+  "شلال متنوع من الخبز الإيطالي والفرنسي والعربي الأسمر والأبيض": [["it_bread", 120], ["it_butter", 0.8]],
 }
 
 let lineSeq = 0

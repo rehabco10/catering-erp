@@ -163,10 +163,11 @@ export function MenusPage() {
                       </p>
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className="text-[12px] tabular-nums">
-                          {/* "≥" because uncosted dishes can only add to it —
-                              see the pricing block in MenuForm. */}
-                          {menu.items.some((i) => catalog.recipes.get(i.recipe)?.draft) ? "≥ " : ""}
+                          {/* "+" because uncosted dishes can only add to it.
+                              Not "≥" — that character mirrors to "≤" in an
+                              Arabic run. See the pricing block in MenuForm. */}
                           {money(cost.perCover)}
+                          {menu.items.some((i) => catalog.recipes.get(i.recipe)?.draft) ? "+" : ""}
                           <span className="text-muted-foreground">
                             {" / "}
                             {cost.pricePerCover === null ? "—" : money(cost.pricePerCover)}

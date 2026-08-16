@@ -273,10 +273,13 @@ export function MenuForm({
             <span className="text-2xl font-bold text-[color:var(--brand-navy-deep)] tabular-nums">
               {/* A partially-costed menu's cost is a LOWER BOUND — costing the
                   remaining dishes can only add to it. Printing it bare invites
-                  reading a 35%-costed package as cheaper than a 79%-costed one,
-                  which is exactly backwards. */}
-              {uncosted > 0 ? "≥ " : ""}
+                  reading a 58%-costed package as cheaper than an 89%-costed
+                  one, which is exactly backwards.
+
+                  A "+" suffix, not "≥": U+2265 is Bidi_Mirrored, so in an
+                  Arabic run it renders as "≤" and says the opposite. */}
               {money(cost.perCover)}
+              {uncosted > 0 ? "+" : ""}
             </span>
           </div>
           <div className="mt-1 text-[11px] text-[color:var(--brand-navy-deep)]/70 tabular-nums">

@@ -150,3 +150,10 @@ bundle is already ~1.2 MB; anything added to it should be earning its place.
 `docs/catering-engine.md` is the sourcing for every rule — yields, the Q
 factor, food-cost targets, halal certification. Read it before changing a
 number in the engine, and update it when you do.
+
+`docs/glossary.json` is the shared vocabulary — one Arabic headword per idea,
+with the English term as the canonical reference when the Arabic drifts.
+`pnpm glossary` regenerates `docs/glossary.html` (standalone, no build step,
+open it in a browser). Edit the JSON, never the HTML. If you introduce a word
+the business will say out loud — a new course, a new costing basis, a new
+compliance check — it belongs there before it belongs in a locale file.

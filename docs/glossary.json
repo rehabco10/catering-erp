@@ -1,0 +1,926 @@
+{
+  "@context": "https://schema.org",
+  "@type": "DefinedTermSet",
+  "@id": "https://rehab.sa/catering/glossary",
+  "name": "REHAB Catering — shared vocabulary",
+  "alternateName": "معجم منظومة الإعاشة — رحاب",
+  "inLanguage": "ar",
+  "description": "اسم واحد لكل فكرة: بالعربية، ومقابله الإنجليزي كما هو معتمد في المنظومة. مكتوب ليتحدث مدير التشغيل والمطوّر عن الشيء نفسه باللفظ نفسه.",
+  "creator": {
+    "@type": "Organization",
+    "name": "شركة رحاب للخدمات والتسويق المحدودة",
+    "alternateName": "Rehab Services & Marketing Co. Ltd."
+  },
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "@id": "#item",
+      "termCode": "item",
+      "name": "Item",
+      "alternateName": "مادة",
+      "description": "ما تطلبه الوصفة — «٦ كجم أرز بسمتي». لا تحمل شيئًا عن الشراء: لا موردًا ولا سعرًا ولا عبوة، فتلك تختلف باختلاف طريقة الشراء وتُسجَّل على العبوة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "قرار تصميمي"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "كانت تُسمّى «مكوّن» قبل الفصل. سطر الوصفة لا يشير إلى عبوة أبدًا، بل إلى المادة."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#variant",
+      "termCode": "variant",
+      "name": "Purchase variant",
+      "alternateName": "عبوة شراء",
+      "description": "طريقة شراء المادة — «كيس ٢٠ كجم من مؤسسة المؤن بـ ١٦٥ ر.س، نسبة استخلاص ١٠٠٪». للمادة الواحدة عبوات عدة، وعليها يُسجَّل المورد والعبوة والسعر ونسبة الاستخلاص والتخزين والرصيد.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "قرار تصميمي"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "اللحم الطازج والمجمّد عبوتان لمادة واحدة، لا مادتان: الصنف نفسه، لكن الفاقد مختلف وتكلفة الكيلو الصافي مختلفة."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#costing-basis",
+      "termCode": "costing-basis",
+      "name": "Costing basis (preferred variant)",
+      "alternateName": "العبوة المعتمدة",
+      "description": "العبوة الوحيدة التي تُسعَّر المادة من خلالها. تُختار صراحةً ولا تُستنتج، وكل وصفة وكل قائمة بعدها تُحسَب على سعر وحدتها الصافية.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "قرار تصميمي"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "رُفضت قاعدة «الأرخص يفوز»: كانت ستعيد تسعير كل قائمة لحظة إدراج مورد لصنف رخيص، وأسعار القوائم مقدَّمة للعملاء. وعند حذف العبوة المعتمدة يُفرَّغ المؤشر ولا يُنقل تلقائيًا إلى غيرها."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#recipe",
+      "termCode": "recipe",
+      "name": "Recipe",
+      "alternateName": "وصفة",
+      "description": "الصنف بوصفه قائمة مواد: أسطر من المواد والوصفات الفرعية، وإنتاج الطبخة، ووزن الحصة، وزمن التحضير، ومدة الصلاحية.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#sub-recipe",
+      "termCode": "sub-recipe",
+      "name": "Sub-recipe",
+      "alternateName": "وصفة فرعية",
+      "description": "وصفة تُستخدَم سطرًا داخل وصفة أخرى — خلطة البهارات داخل الكبسة. هي ما يجعل النموذج قائمة مواد لا قائمة مشتريات: الهيل داخل الخلطة لا بد أن يصل إلى التكلفة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "الكميات بحصص الوصفة الفرعية. وإن دارت الوصفة على نفسها قُطع الفرع وسُجّلت ملاحظة، ولا يُرمى خطأ."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#draft-dish",
+      "termCode": "draft-dish",
+      "name": "Draft dish",
+      "alternateName": "صنف مسودة",
+      "description": "اسم صنف منقول من باقة العميل لم يُحسَب له تركيب بعد. لا يضيف شيئًا إلى التكلفة، ويُعرَض على أنه «بلا تكلفة» لا على أنه صفر.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مستند العميل"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "الشركة تعرض نحو ١٢٠ صنفًا، وأكثرها اسم على باقة قبل أن يكتب أحد وصفته. لذلك تُجمَع الملاحظة على مستوى القائمة، لا ملاحظة لكل مسودة."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#package",
+      "termCode": "package",
+      "name": "Package (Menu)",
+      "alternateName": "باقة",
+      "description": "ما يُباع فعلًا: مجموعة أصناف موزَّعة على أقسام، بسعر للفرد الواحد. ومستند العميل يرقّمها من ١ إلى ٤ تصاعديًا في الفخامة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مستند العميل — docs/source/buffet-packages.md"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "حلّت محل تصنيف «اقتصادية / قياسية / مميزة»، وكان مُختلَقًا. السلّم الحقيقي أربعة مستويات مرقَّمة."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#course",
+      "termCode": "course",
+      "name": "Section (Course)",
+      "alternateName": "قسم البوفيه",
+      "description": "موضع الصنف على البوفيه: المقبلات الباردة، والمقبلات الساخنة، والأطباق الرئيسية، والحلويات، والخبز، والمشروبات، والتعبئة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مستند العميل — docs/source/buffet-packages.md"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "شأن القائمة لا شأن المطبخ: الصنف نفسه قد يكون طبقًا رئيسيًا في باقة وجزءًا من ركن في أخرى. ولا يُخلَط بـ«قسم الإنتاج» في المطبخ، وإن تشابه اللفظ."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#service-line",
+      "termCode": "service-line",
+      "name": "Service line",
+      "alternateName": "خط الخدمة",
+      "description": "كيف يصل الطعام إلى الضيف: بوفيه، أو طبخ تقليدي، أو وجبات مسبقة التحضير، أو وجبات جافة، أو ركن. أربع سلاسل إنتاج ومناولة مختلفة، لا أربعة أشكال لشيء واحد.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مستند العميل — docs/source/company-profile.md"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "المسبقة التحضير تمرّ بـ: تعبئة ← تخزين ← إذابة ← تسخين. والجافة لا تمرّ بالتبريد أصلًا."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#inclusions",
+      "termCode": "inclusions",
+      "name": "Inclusions",
+      "alternateName": "الخدمات والتجهيزات المشمولة",
+      "description": "ما يُقدَّم مع الباقة من غير الطعام: الطاولات والمفارش والصحون والملاعق والمناديل والمناشف. تُذكَر ذكرًا ولا تُحسَب كقائمة مواد.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مستند العميل — ركن الذبائح"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "ركن الذبائح مُعرَّف بها كلها تقريبًا، ولذلك لا تُعدّ الباقة فارغة لمجرد خلوّها من الأصناف. لكنها تبقى مُلزَمة بسعر."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#station",
+      "termCode": "station",
+      "name": "Kitchen station",
+      "alternateName": "قسم الإنتاج",
+      "description": "موضع تحضير الوصفة في المطبخ: ساخن، أو بارد، أو مخبز، أو مشروبات، أو تجهيز وتعبئة. يُجمَّع عليه جدول الإنتاج بحسب من يقرؤه.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "chain"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "غير «قسم البوفيه»، وإن استُعملت كلمة «قسم» للاثنين في العربية."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#ap-cost",
+      "termCode": "ap-cost",
+      "name": "As-purchased cost (AP)",
+      "alternateName": "سعر الشراء",
+      "description": "تكلفة الوحدة الواحدة كما في الفاتورة، قبل أي تنظيف أو فاقد. كيس ٢٠ كجم بـ ١٦٥ ر.س يساوي ٨٫٢٥ ر.س للكيلو شراءً.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مراجع حساب التكلفة — docs/catering-engine.md §1"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#ep-cost",
+      "termCode": "ep-cost",
+      "name": "Edible-portion cost (EP)",
+      "alternateName": "تكلفة الوحدة الصافية",
+      "description": "تكلفة الوحدة بعد احتساب الفاقد: سعر الشراء ÷ نسبة الاستخلاص. هذا ما تستهلكه الوصفة فعلًا، وهو التكلفة الوحيدة التي يعتمدها المحرّك.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مراجع حساب التكلفة — docs/catering-engine.md §1"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "حساب الوصفة على سعر الشراء يقلّل التكلفة بمقدار الفاقد تمامًا — نحو ٢٨٪ في الدجاج الكامل."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#yield",
+      "termCode": "yield",
+      "name": "Yield",
+      "alternateName": "نسبة الاستخلاص",
+      "description": "ما يتبقّى صالحًا للاستعمال بعد التنظيف والتقشير ونزع العظم والتصفية والطبخ، بالنسبة المئوية. و١٠٠ تعني بلا فاقد.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مراجع حساب التكلفة — docs/catering-engine.md §1"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "تخصّ العبوة لا المادة: الدجاج الكامل يستخلص نحو ٧٢٪، وصدر الدجاج المنزوع العظم نحو ٩٨٪."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#pack",
+      "termCode": "pack",
+      "name": "Pack & pack size",
+      "alternateName": "العبوة ومحتواها",
+      "description": "الشكل الذي يشحن به المورد، وعدد الوحدات في العبوة الواحدة: كيس أو صندوق أو كرتون أو صينية أو كيلو مفرد. والطلب يُقرَّب دائمًا لأعلى إلى عبوات كاملة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "الموردون يشحنون أكياسًا سعة ٢٠ كجم لا عشرين كيلو مفرَّقة، وطلب ١٢٫٤ كجم طلب لا يستطيع أحد تلبيته."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#batch",
+      "termCode": "batch",
+      "name": "Batch",
+      "alternateName": "طبخة",
+      "description": "دورة إنتاج واحدة للوصفة. وعدد حصصها هو المقسوم عليه في كل حساب تكلفة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#portion",
+      "termCode": "portion",
+      "name": "Portion",
+      "alternateName": "حصة",
+      "description": "تقديمة واحدة من صنف واحد. وليست «فردًا»: الضيف الواحد يأخذ حصصًا عدة من أصناف البوفيه.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#cover",
+      "termCode": "cover",
+      "name": "Cover",
+      "alternateName": "فرد",
+      "description": "ضيف واحد يتناول وجبة واحدة. وهو وحدة القياس التجارية في كل شيء: التكلفة للفرد، والسعر للفرد.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#portions-per-cover",
+      "termCode": "portions-per-cover",
+      "name": "Portions per cover",
+      "alternateName": "حصص لكل فرد",
+      "description": "كم يأخذ الفرد الواحد من صنف بعينه. وهي كسرية عمدًا: بوفيه فيه خمسة عشر صنفًا من المقبلات الباردة لا يقدّم خمس عشرة حصة لكل ضيف.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "تقدير مهني — انظر scripts/seed-from-docs.mjs"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "تقريبها إلى ١ هو الطريق المعتاد لتضخيم تكلفة البوفيه أضعافًا. البيانات الأولية توزّع «ميزانية» لكل قسم على أصنافه بالتساوي."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#q-factor",
+      "termCode": "q-factor",
+      "name": "Q factor",
+      "alternateName": "معامل المكمّلات",
+      "description": "نسبة مئوية ثابتة تُضاف إلى تكلفة الطبق الخام مقابل ما هو على كل فرد ولا يظهر في بطاقة أي وصفة: الخبز والزبدة والمقبّلات والزيت والتوابل. والعُرف ٥–١٠٪، وهذه المنشأة على ٧٪.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مراجع حساب التكلفة — docs/catering-engine.md §3"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "ولأن المعامل يغطي التتبيل، فالملح والفلفل غائبان عمدًا عن كل قائمة مواد؛ إدراجهما احتساب مزدوج."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#food-cost-pct",
+      "termCode": "food-cost-pct",
+      "name": "Food cost percentage",
+      "alternateName": "نسبة تكلفة الطعام",
+      "description": "تكلفة الفرد منسوبةً إلى سعر بيع الفرد. وهو الرقم الذي يُحاسَب عليه المتعهّد.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مراجع حساب التكلفة — docs/catering-engine.md §4"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "مؤسسات الإعاشة تستهدف عادةً ٢٥–٣٠٪."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#target-food-cost",
+      "termCode": "target-food-cost",
+      "name": "Target food cost",
+      "alternateName": "مستهدف تكلفة الطعام",
+      "description": "نسبة تكلفة الطعام التي تُهندَس القوائم لبلوغها. سياسة تُضبَط مرة واحدة، ومُدخَل للمحرّك لا ثابت مدفون داخله.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "سياسة تشغيل"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "تُقاس القائمة عليه ضمن نطاق ±٢ نقطة؛ وأضيق من ذلك يجعل تذبذب أسعار الموردين المعتاد يُظهر كل قائمة خارج المستهدف."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#price-at-target",
+      "termCode": "price-at-target",
+      "name": "Price at target",
+      "alternateName": "تسعير على المستهدف",
+      "description": "سعر البيع الناتج عن التكلفة والمستهدف: السعر = التكلفة ÷ النسبة المستهدفة. التكلفة تُكتشَف، والمستهدف سياسة، والسعر ينتج عنهما.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "مراجع حساب التكلفة — docs/catering-engine.md §4"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "تقديم السعر أولًا ثم الأمل في أن تتّسع له التكلفة هو الطريق المعتاد لعقد موقَّع خاسر."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#coverage",
+      "termCode": "coverage",
+      "name": "Costing coverage",
+      "alternateName": "تغطية التكلفة",
+      "description": "نسبة أصناف الباقة التي لها تركيب محسوب فعلًا. وما دامت دون ١٠٠٪ فتكلفة الباقة حدّ أدنى لا رقم نهائي، وتُعرَض بعلامة «+».",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "costing"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "قرار تصميمي"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "تفاوت التغطية أظهر الباقة الفاخرة يومًا أرخص من الأساسية. لا تُقارَن باقتان محسوبتان بعمقين مختلفين."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#par-level",
+      "termCode": "par-level",
+      "name": "Par level",
+      "alternateName": "الحد الأدنى",
+      "description": "الرصيد الواجب بقاؤه على الرف بين توريد وآخر. يخصّ المادة كاملة بجمع كل عبواتها — فالمطبخ ينفد منه «الأرز»، لا «أرز مورد بعينه».",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "inventory"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "الحد الأدنى هو ما يقرّر به مطبخ بلا توقّع طلب ماذا يشتري. يجيب عن «ما الناقص»، ولا يجيب أبدًا عن «ما القادم»."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#on-hand",
+      "termCode": "on-hand",
+      "name": "On hand",
+      "alternateName": "الرصيد",
+      "description": "الموجود في المخزن بوحدات المادة، بحال الشراء. يُسجَّل على مستوى العبوة لأن الرف يحمل عبوات بعينها.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "inventory"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#shortfall",
+      "termCode": "shortfall",
+      "name": "Shortfall",
+      "alternateName": "النقص",
+      "description": "ما دون الحد الأدنى: الحد الأدنى ناقص الرصيد. ويُشترى عبواتٍ كاملة من العبوة المعتمدة للمادة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "inventory"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#lead-time",
+      "termCode": "lead-time",
+      "name": "Lead time",
+      "alternateName": "مهلة التوريد",
+      "description": "أيام العمل بين إصدار الطلب للمورد واستلامه. وبها يُعرَف متى يصل طلبٌ يُقدَّم اليوم.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "inventory"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#inventory-value",
+      "termCode": "inventory-value",
+      "name": "Inventory value",
+      "alternateName": "قيمة المخزون",
+      "description": "قيمة ما في المخزن، مجموعةً لكل عبوة بسعر وحدتها الصافية هي.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "inventory"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "قرار تصميمي"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "تُقوَّم بالتكلفة الصافية لا بسعر الفاتورة: مئة كيلو من مادة استخلاصها ٦٨٪ هي ٦٨ كيلو طعام صالح."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#supplier",
+      "termCode": "supplier",
+      "name": "Supplier",
+      "alternateName": "مورد",
+      "description": "من تُشترى منه عبوة الشراء. يحمل مهلة التوريد، ويحمل شهادة الحلال وتاريخ انتهائها حيث تلزم.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "inventory"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "يرتبط بالعبوة لا بالمادة، وهذا بالضبط ما يتيح للمادة الواحدة مصدرين."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#halal-critical",
+      "termCode": "halal-critical",
+      "name": "Halal-critical",
+      "alternateName": "يخضع لاشتراط الحلال",
+      "description": "مادة يلزم أن يحمل موردها شهادة حلال سارية — اللحوم والدواجن. ويفعّل هذا الوصف فحص الشهادة على كل عبوة من عبوات المادة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "compliance"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "الهيئة العامة للغذاء والدواء ووزارة الحج والعمرة — docs/catering-engine.md §6"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "يُفحَص على كل عبوة لا على المعتمدة وحدها: العبوة غير المعتمَدة الشهادة مخزون قد يكون بحوزتك أيًّا كانت العبوة التي تُسعّر الوصفات."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#halal-certificate",
+      "termCode": "halal-certificate",
+      "name": "Halal certificate",
+      "alternateName": "شهادة الحلال",
+      "description": "رقم شهادة المورد وتاريخ انتهائها. وانتهاء الشهادة على مادة خاضعة للاشتراط ملاحظة حاجبة، لا تذكير.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "compliance"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "الهيئة العامة للغذاء والدواء ووزارة الحج والعمرة"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#allergen",
+      "termCode": "allergen",
+      "name": "Allergen",
+      "alternateName": "مسبّبات الحساسية",
+      "description": "واحد من تسعة مسبّبات واجبة الإفصاح، تُسجَّل على المادة ليمكن فحص القائمة آليًا أمام قيد غذائي مُعلَن.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "compliance"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "اشتراط بطاقة البيانات الغذائية"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "البيانات مُنمذَجة، أما الفحص نفسه فلم يُكتب بعد."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#storage-class",
+      "termCode": "storage-class",
+      "name": "Storage class",
+      "alternateName": "التخزين",
+      "description": "جاف أو مبرَّد أو مجمَّد. صفة لعبوة الشراء — فاللحم الطازج والمجمَّد عبوتان لمادة واحدة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "compliance"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف مهني"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#blocking-finding",
+      "termCode": "blocking-finding",
+      "name": "Blocking finding",
+      "alternateName": "ملاحظة حاجبة",
+      "description": "ما يمنع بيع القائمة أو يجعل المال غير صحيح: شهادة منتهية، أو باقة بلا سعر، أو قائمة تُباع بأقل من تكلفتها.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "checks"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "قرار تصميمي"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#advisory",
+      "termCode": "advisory",
+      "name": "Advisory",
+      "alternateName": "تنبيه",
+      "description": "ما يستحق الانتباه قبل أن يصير خللًا: رصيد دون الحد الأدنى، أو عبوة أرخص مسجَّلة، أو نسبة استخلاص ١٠٠٪ مشكوك فيها على لحم.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "checks"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "قرار تصميمي"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "تُجمَع الملاحظات حيث يؤدي «ملاحظة لكل سطر» إلى طمس البقية: ١١٣ صنفًا بلا تكلفة تُنتج ملاحظة واحدة لكل قائمة، لا ١١٣ ملاحظة."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#guarantee",
+      "termCode": "guarantee",
+      "name": "Guarantee",
+      "alternateName": "العدد المثبَّت",
+      "description": "عدد الوجبات الذي يلتزم به العميل قبل موعد محدَّد سابق للخدمة. وهو أرضية الفوترة، وهو العدد الذي يشتري المطبخ على أساسه.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "out-of-scope"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف الولائم — docs/catering-engine.md Appendix A"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "note",
+          "value": "الفوترة غير متماثلة: دون العدد المثبَّت يُفوتر المثبَّت، وفوقه يُفوتر الحضور الفعلي."
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#overset",
+      "termCode": "overset",
+      "name": "Overset",
+      "alternateName": "الفائض المنتَج",
+      "description": "إنتاج فوق العدد المثبَّت بنحو ٥٪ ليأكل القادمون غير المتوقَّعين. ولا يُفوتر ما لم يُستهلك.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "out-of-scope"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف الولائم — docs/catering-engine.md Appendix A"
+        }
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "#billable-covers",
+      "termCode": "billable-covers",
+      "name": "Billable covers",
+      "alternateName": "الوجبات المفوترة",
+      "description": "الأكبر من: العدد المثبَّت، والحضور الفعلي. وهو ما تعتمده الفاتورة.",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "group",
+          "value": "out-of-scope"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "source",
+          "value": "عُرف الولائم — docs/catering-engine.md Appendix A"
+        }
+      ]
+    }
+  ]
+}

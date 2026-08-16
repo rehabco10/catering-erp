@@ -11,7 +11,8 @@
     "preview:stage": "vite preview --mode staging --port 4174",
     "typecheck": "tsc -b --noEmit",
     "test": "tsc -p tsconfig.test.json && node --test test/*.test.mjs",
-    "shot": "node scripts/shot.mjs"
+    "shot": "node scripts/shot.mjs",
+    "glossary": "node scripts/glossary.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

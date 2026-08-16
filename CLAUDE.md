@@ -16,8 +16,9 @@ the **costing basis** and prices everything downstream. Never let a recipe
 reference a variant.
 
 Everything else — contracts, service orders, guarantees, production plans,
-procurement against demand, staffing — was cut on `slim/mvp` and is on `main`
-if it is wanted back. Do not re-add it piecemeal; take it from `main`.
+procurement against demand, staffing — was cut when the MVP was scoped to
+those three, and survives on `archive/full-scaffold` if it is wanted back. Do
+not re-add it piecemeal; take it from there.
 
 ## Commands
 
@@ -38,6 +39,14 @@ and only the screenshot showed the detail pane sitting empty.
 `pnpm shot` fails on any console error, failed request or unhandled rejection,
 and reports node/edge counts plus anything that looks like an untranslated
 `some.key`. Screenshots land in `screenshots/` (gitignored).
+
+A push to `main` runs those same gates in `.github/workflows/pages.yml` and
+publishes `dist/` to GitHub Pages. **The app is served from `/catering-erp/`,
+not a domain root** — never hardcode an absolute `/path` for an asset or a
+route. Assets go through `import.meta.env.BASE_URL`, routes go through
+`useLocalePath`, and the locale prefix is read only after `stripBase`. The
+build also emits `404.html` as a copy of the entry, which is how a deep link
+survives a refresh on a host that has no server-side rewrite.
 
 ## The boundary
 
